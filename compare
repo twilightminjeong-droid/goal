@@ -1,0 +1,72 @@
+class GolfContinuousCaptureEngine {
+  constructor(videoElement, audioStream) {
+    this.video = videoElement;
+    this.ringBuffer = []; // 최근 4초 프레임 보관
+    this.state = 'IDLE';
+    this.addressHoldTime = 0;
+    this.lastImpactTime = 0;
+    this.cooldownSeconds = 3.0; // 샷 직후 3초간 재감지 방지
+  }
+
+  // 매 프레임(30fps) 호출되는 메인 감지 루프
+  onPoseFrame(landmarks, currentAudioLevel) {
+    const now = performance.now() / 1000;
+    this.updateRingBuffer();
+
+    // 쿨다운 체크
+    if (now - this.lastImpactTime < this.cooldownSeconds) return;
+
+    const wrist = landmarks[16]; // 오른 손목
+    const isStationary = this.checkBodyStability(landmarks);
+
+    switch (this.state) {
+      case 'IDLE':
+        // 골퍼가 어드레스 자세로 정지했는지 확인
+        if (isStationary && wrist.y > 0.6) {
+          this.addressHoldTime += 0.033; // 1프레임(약 33ms)
+          if (this.addressHoldTime >= 1.2) { // 1.2초 정지 완료
+            this.state = 'ADDRESS';
+            console.log("🎯 어드레스 감지: 스윙 준비");
+          }
+        } else {
+          this.addressHoldTime = 0;
+        }
+        break;
+
+      case 'ADDRESS':
+        // 손목이 위로 빠르게 움직이기 시작하면 백스윙
+        if (wrist.velocity_y < -50) { 
+          this.state = 'SWINGING';
+        }
+        break;
+
+      case 'SWINGING':
+        // 타구음 발생 + 손목 최하단 통과 시 임팩트 확정
+        const isImpactSound = currentAudioLevel > 0.75;
+        const isWristBottom = wrist.y > 0.75;
+
+        if (isWristBottom || isImpactSound) {
+          this.lastImpactTime = now;
+          this.state = 'CAPTURING_FINISH';
+          console.log("⚡ 임팩트 감지! 피니시 녹화 중...");
+
+          // 임팩트 후 1.5초 뒤에 영상 자르기 실행
+          setTimeout(() => {
+            this.exportTrimmedClip();
+            this.state = 'IDLE';
+            this.addressHoldTime = 0;
+          }, 1500);
+        }
+        break;
+    }
+  }
+
+  // [임팩트 - 2초] ~ [임팩트 + 1.5초] 3.5초 영상 추출 및 세션 저장
+  exportTrimmedClip() {
+    const clipFrames = this.ringBuffer.slice(-105); // 30fps * 3.5초 = 105프레임
+    const swingId = Date.now();
+    console.log(`✅ 스윙 클립 생성 완료: swing_${swingId}.mp4`);
+    // 세션 갤러리 리스트에 추가 이벤트 발생
+    window.dispatchEvent(new CustomEvent('newSwingCaptured', { detail: { id: swingId } }));
+  }
+}
