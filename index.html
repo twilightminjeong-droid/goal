@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
-  <meta name="theme-color" content="#0b0f19">
+  <meta name="theme-color" content="#090d16">
   <title>AI Golf Coach & Tracer</title>
   <!-- MediaPipe Pose CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
@@ -13,8 +13,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <style>
     :root {
-      --bg: #0b0f19;
-      --card: #151d30;
+      --bg: #090d16;
+      --panel: #131b2e;
+      --card: #18223a;
       --accent: #10b981;
       --accent-glow: rgba(16, 185, 129, 0.45);
       --cyan: #06b6d4;
@@ -22,43 +23,53 @@
       --danger: #ef4444;
       --text: #f8fafc;
       --text-sub: #94a3b8;
-      --border: #1e293b;
+      --border: #23314e;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
       background: var(--bg);
       color: var(--text);
-      padding: 12px;
+      padding: 10px;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
     }
-    .app {
+    .main-app {
       width: 100%;
-      max-width: 480px;
+      max-width: 520px;
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
+      transition: max-width 0.3s;
+    }
+    .main-app.wide-mode {
+      max-width: 960px; /* 듀얼 비교 모드 시 넓은 화면 */
     }
 
+    /* 상단 헤더 & 컨트롤 */
     header {
       display: flex;
       justify-content: space-between;
       align-items: center;
       padding: 4px 2px;
     }
-    header h1 {
-      font-size: 1.2rem;
+    .brand h1 {
+      font-size: 1.18rem;
       font-weight: 800;
       letter-spacing: -0.5px;
     }
-    header h1 span { color: var(--accent); }
+    .brand h1 span { color: var(--accent); }
 
+    .header-ctrls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
     .gender-pill {
       display: flex;
-      background: var(--card);
+      background: var(--panel);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 2px;
@@ -67,19 +78,53 @@
       background: none;
       border: none;
       color: var(--text-sub);
-      font-size: 0.75rem;
+      font-size: 0.72rem;
       font-weight: 700;
-      padding: 4px 10px;
-      border-radius: 16px;
+      padding: 4px 9px;
+      border-radius: 14px;
       cursor: pointer;
-      transition: all 0.2s;
     }
     .pill-btn.active {
       background: var(--accent);
       color: #04101e;
     }
 
-    /* 메인 뷰포트 */
+    /* 모드 전환 탭 바 */
+    .mode-tab-bar {
+      display: flex;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 3px;
+    }
+    .tab-item {
+      flex: 1;
+      text-align: center;
+      padding: 8px 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-sub);
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-item.active {
+      background: var(--card);
+      color: #fff;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    }
+    .tab-item.active.single { color: var(--accent); }
+    .tab-item.active.dual { color: var(--cyan); }
+
+    /* =========================================
+       1. 싱글 원터치 뷰포트 & 카드
+       ========================================= */
+    .single-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
     .viewport {
       position: relative;
       background: #000;
@@ -129,9 +174,7 @@
       align-items: center;
       gap: 8px;
       box-shadow: 0 0 25px var(--accent-glow);
-      transition: transform 0.15s;
     }
-    .upload-btn-big:active { transform: scale(0.96); }
     input[type="file"] { display: none; }
 
     .status-toast {
@@ -157,28 +200,20 @@
       border-radius: 50%;
       animation: pulse 1s infinite;
     }
-    @keyframes pulse {
-      0% { opacity: 1; transform: scale(1); }
-      50% { opacity: 0.4; transform: scale(1.4); }
-      100% { opacity: 1; transform: scale(1); }
-    }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-    /* 실시간 채점 결과 카드 */
     .result-card {
       background: var(--card);
       border: 1px solid var(--border);
       border-radius: 16px;
-      padding: 18px;
+      padding: 16px 18px;
       display: none;
       flex-direction: column;
-      gap: 14px;
+      gap: 12px;
       box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
       animation: slideUp 0.3s ease-out;
     }
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(15px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
     .result-header {
       display: flex;
@@ -187,12 +222,12 @@
     }
     .score-block { display: flex; flex-direction: column; }
     .score-block .label { font-size: 0.72rem; color: var(--text-sub); }
-    .score-block .score-wrapper { display: flex; align-items: baseline; gap: 6px; }
+    .score-wrapper { display: flex; align-items: baseline; gap: 6px; }
     .score-block .num { font-size: 2.2rem; font-weight: 900; line-height: 1.1; }
-    .score-block .grade-tag {
+    .grade-tag {
       font-size: 0.75rem;
       font-weight: 800;
-      padding: 3px 8px;
+      padding: 2px 7px;
       border-radius: 12px;
       border: 1px solid currentColor;
     }
@@ -202,13 +237,12 @@
     .dist-block .num { font-size: 1.8rem; font-weight: 800; color: var(--cyan); line-height: 1.1; }
     .dist-block .num span { font-size: 0.85rem; font-weight: 400; color: var(--text-sub); margin-left: 2px; }
 
-    /* 4대 부위별 실시간 스코어 미터 */
     .score-breakdown {
       display: grid;
       grid-template-columns: repeat(2, 1fr);
-      gap: 8px;
+      gap: 7px;
       background: rgba(11, 15, 25, 0.5);
-      padding: 10px;
+      padding: 9px;
       border-radius: 10px;
       border: 1px solid var(--border);
     }
@@ -219,20 +253,17 @@
     .coach-tip {
       background: rgba(16, 185, 129, 0.08);
       border-left: 4px solid var(--accent);
-      padding: 12px 14px;
+      padding: 11px 13px;
       border-radius: 8px;
       font-size: 0.82rem;
       line-height: 1.5;
     }
     .coach-tip strong { color: var(--accent); }
 
-    .action-row {
-      display: flex;
-      gap: 8px;
-    }
+    .action-row { display: flex; gap: 8px; }
     .btn-action {
       flex: 1;
-      padding: 12px 8px;
+      padding: 11px 8px;
       border-radius: 10px;
       cursor: pointer;
       font-size: 0.82rem;
@@ -243,94 +274,310 @@
       justify-content: center;
       gap: 4px;
     }
-    .btn-replay {
+    .btn-replay { background: rgba(255, 255, 255, 0.08); border: 1px solid var(--border); color: #fff; }
+    .btn-share { background: rgba(6, 182, 212, 0.15); border: 1px solid var(--cyan); color: var(--cyan); }
+    .btn-new { background: var(--accent); border: none; color: #04101e; font-weight: 800; }
+
+    /* =========================================
+       2. 듀얼 비교 (Side-by-Side) 뷰포트
+       ========================================= */
+    .dual-section {
+      display: none;
+      flex-direction: column;
+      gap: 10px;
+      width: 100%;
+    }
+    .dual-viewport {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      width: 100%;
+    }
+    @media (max-width: 580px) {
+      .dual-viewport { grid-template-columns: 1fr; }
+    }
+    .video-slot {
+      background: #000;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      position: relative;
+      aspect-ratio: 9 / 13;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    .slot-a { border-top: 3px solid var(--accent); }
+    .slot-b { border-top: 3px solid var(--cyan); }
+    .slot-tag {
+      position: absolute;
+      top: 8px;
+      left: 8px;
+      font-size: 0.68rem;
+      font-weight: 800;
+      padding: 3px 8px;
+      border-radius: 6px;
+      z-index: 5;
+    }
+    .slot-a .slot-tag { background: var(--accent); color: #000; }
+    .slot-b .slot-tag { background: var(--cyan); color: #000; }
+
+    .slot-upload {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      text-align: center;
+      padding: 15px;
+    }
+    .slot-upload span { font-size: 0.74rem; color: var(--text-sub); }
+
+    .dual-controls {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .dual-slider-row { display: flex; align-items: center; gap: 10px; }
+    .dual-slider-row input[type="range"] { flex: 1; accent-color: var(--cyan); height: 5px; cursor: pointer; }
+    .dual-btns {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .btn-dual {
       background: rgba(255, 255, 255, 0.08);
       border: 1px solid var(--border);
       color: #fff;
+      padding: 6px 11px;
+      border-radius: 8px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      cursor: pointer;
     }
-    .btn-share {
-      background: rgba(6, 182, 212, 0.15);
-      border: 1px solid var(--cyan);
-      color: var(--cyan);
+    .btn-dual-sync { background: rgba(6, 182, 212, 0.2); border-color: var(--cyan); color: var(--cyan); }
+
+    .comp-dashboard {
+      background: var(--panel);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      text-align: center;
     }
-    .btn-new {
-      background: var(--accent);
-      border: none;
-      color: #04101e;
-      font-weight: 800;
-    }
+    .comp-col .title { font-size: 0.65rem; color: var(--text-sub); margin-bottom: 2px; }
+    .comp-col .vals { font-size: 0.9rem; font-weight: 800; display: flex; justify-content: center; gap: 4px; align-items: baseline; }
+    .comp-diff { font-size: 0.68rem; font-weight: bold; color: var(--accent); margin-top: 2px; }
   </style>
 </head>
 <body>
 
-<div class="app">
+<div class="main-app" id="mainApp">
   <header>
-    <h1>⛳ <span>AI</span> 스윙 코치 & 트레이서</h1>
-    <div class="gender-pill">
-      <button class="pill-btn active" id="btnFemale">👩 여성</button>
-      <button class="pill-btn" id="btnMale">👨 남성</button>
+    <div class="brand">
+      <h1>⛳ <span>AI</span> GOLF COACH</h1>
+    </div>
+    <div class="header-ctrls">
+      <div class="gender-pill">
+        <button class="pill-btn active" id="btnFemale">👩 여성</button>
+        <button class="pill-btn" id="btnMale">👨 남성</button>
+      </div>
     </div>
   </header>
 
-  <div class="viewport" id="viewport">
-    <div class="status-toast" id="statusToast">
-      <div class="dot"></div>
-      <span id="statusText">AI 스윙 관절 분석 중...</span>
-    </div>
-
-    <div class="empty-state" id="emptyState">
-      <div style="font-size: 3rem; margin-bottom: 2px;">🏌️‍♀️</div>
-      <label class="upload-btn-big" for="videoFile">
-        🎥 스윙 영상 선택하기
-      </label>
-      <input type="file" id="videoFile" accept="video/*">
-      <div style="font-size: 0.78rem; color: var(--text-sub); line-height: 1.4;">
-        스마트폰 갤러리에 있는<br>골프 스윙 영상을 골라주세요
-      </div>
-    </div>
-
-    <video id="videoElement" playsinline muted preload="auto"></video>
-    <canvas id="outputCanvas"></canvas>
+  <!-- 2대 모드 탭 스위처 -->
+  <div class="mode-tab-bar">
+    <div class="tab-item active single" id="tabSingle">🔍 원터치 분석</div>
+    <div class="tab-item dual" id="tabDual">👥 듀얼 비교 Lab</div>
   </div>
 
-  <!-- 결과 리포트 카드 (점수와 비거리가 스윙마다 달라짐) -->
-  <div class="result-card" id="resultCard">
-    <div class="result-header">
-      <div class="score-block">
-        <span class="label">스윙 종합 점수</span>
-        <div class="score-wrapper">
-          <span class="num" id="resScore">--점</span>
-          <span class="grade-tag" id="resGrade">A 등급</span>
+  <!-- =========================================
+       1. 싱글 원터치 분석 모드
+       ========================================= -->
+  <div class="single-section" id="singleSection">
+    <div class="viewport" id="viewport">
+      <div class="status-toast" id="statusToast">
+        <div class="dot"></div>
+        <span id="statusText">AI 스윙 관절 분석 중...</span>
+      </div>
+
+      <div class="empty-state" id="emptyState">
+        <div style="font-size: 3rem; margin-bottom: 2px;">🏌️‍♀️</div>
+        <label class="upload-btn-big" for="videoFile">
+          🎥 스윙 영상 선택하기
+        </label>
+        <input type="file" id="videoFile" accept="video/*">
+        <div style="font-size: 0.76rem; color: var(--text-sub); line-height: 1.4;">
+          스마트폰 갤러리에 있는<br>골프 스윙 영상을 골라주세요
         </div>
       </div>
-      <div class="dist-block">
-        <span class="label" id="resGenderLabel">예상 비거리</span>
-        <span class="num" id="resDist">--<span>m</span></span>
+
+      <video id="videoElement" playsinline muted preload="auto"></video>
+      <canvas id="outputCanvas"></canvas>
+    </div>
+
+    <!-- 결과 리포트 카드 -->
+    <div class="result-card" id="resultCard">
+      <div class="result-header">
+        <div class="score-block">
+          <span class="label">스윙 종합 점수</span>
+          <div class="score-wrapper">
+            <span class="num" id="resScore">--점</span>
+            <span class="grade-tag" id="resGrade">A 등급</span>
+          </div>
+        </div>
+        <div class="dist-block">
+          <span class="label" id="resGenderLabel">예상 비거리 (여성)</span>
+          <span class="num" id="resDist">--<span>m</span></span>
+        </div>
+      </div>
+
+      <div class="score-breakdown">
+        <div class="sb-item"><span class="name">머리 고정(축)</span><span class="pts" id="sbHead">--/25</span></div>
+        <div class="sb-item"><span class="name">골반 유지(배치기)</span><span class="pts" id="sbHip">--/25</span></div>
+        <div class="sb-item"><span class="name">어깨 회전각</span><span class="pts" id="sbShoulder">--/25</span></div>
+        <div class="sb-item"><span class="name">피니시 밸런스</span><span class="pts" id="sbFinish">--/25</span></div>
+      </div>
+
+      <div class="coach-tip" id="resCoach">
+        <strong>💡 AI 원포인트 레슨:</strong><br>
+        <span id="coachText">분석 중...</span>
+      </div>
+
+      <div class="action-row">
+        <button class="btn-action btn-replay" id="replayBtn">🔄 다시 보기</button>
+        <button class="btn-action btn-share" id="shareBtn">📸 카드 저장</button>
+        <label class="btn-action btn-new" for="videoFile">다른 영상</label>
+      </div>
+    </div>
+  </div>
+
+  <!-- =========================================
+       2. 듀얼 비교 (Side-by-Side) 모드
+       ========================================= -->
+  <div class="dual-section" id="dualSection">
+    <div class="dual-viewport">
+      <div class="video-slot slot-a">
+        <span class="slot-tag">스윙 A (기준)</span>
+        <label class="slot-upload" for="fileA" id="lblA">
+          <div style="font-size: 1.8rem;">📁</div>
+          <span><strong>스윙 A 선택</strong><br>(이전 스윙)</span>
+        </label>
+        <input type="file" id="fileA" accept="video/*">
+        <video id="videoA" playsinline muted preload="auto"></video>
+      </div>
+
+      <div class="video-slot slot-b">
+        <span class="slot-tag">스윙 B (현재)</span>
+        <label class="slot-upload" for="fileB" id="lblB">
+          <div style="font-size: 1.8rem;">📁</div>
+          <span><strong>스윙 B 선택</strong><br>(현재 스윙)</span>
+        </label>
+        <input type="file" id="fileB" accept="video/*">
+        <video id="videoB" playsinline muted preload="auto"></video>
       </div>
     </div>
 
-    <!-- 4대 부위별 실제 계측 점수 -->
-    <div class="score-breakdown">
-      <div class="sb-item"><span class="name">머리 고정(축)</span><span class="pts" id="sbHead">--/25</span></div>
-      <div class="sb-item"><span class="name">골반 유지(배치기)</span><span class="pts" id="sbHip">--/25</span></div>
-      <div class="sb-item"><span class="name">어깨 회전각</span><span class="pts" id="sbShoulder">--/25</span></div>
-      <div class="sb-item"><span class="name">피니시 밸런스</span><span class="pts" id="sbFinish">--/25</span></div>
+    <!-- 듀얼 마스터 컨트롤러 -->
+    <div class="dual-controls">
+      <div class="dual-slider-row">
+        <input type="range" id="dualSeek" min="0" max="100" value="0" step="0.1" disabled>
+        <span id="dualTimeTxt" style="font-size: 0.7rem; color: var(--text-sub); font-variant-numeric: tabular-nums;">00:00</span>
+      </div>
+      <div class="dual-btns">
+        <div style="display: flex; gap: 5px;">
+          <button class="btn-dual" id="btnDualPlay" disabled>▶ 동시 재생</button>
+          <button class="btn-dual" id="btnDualPrev" disabled>◀ 1F</button>
+          <button class="btn-dual" id="btnDualNext" disabled>1F ▶</button>
+          <button class="btn-dual btn-dual-sync" id="btnDualSync">🎯 임팩트 싱크</button>
+        </div>
+        <div style="display: flex; gap: 4px;">
+          <button class="btn-dual speed-d" data-s="0.25">0.25x</button>
+          <button class="btn-dual speed-d" data-s="0.5">0.5x</button>
+          <button class="btn-dual speed-d" data-s="1.0" style="border-color: var(--cyan);">1.0x</button>
+        </div>
+      </div>
     </div>
 
-    <div class="coach-tip" id="resCoach">
-      <strong>💡 AI 원포인트 레슨:</strong><br>
-      <span id="coachText">분석 결과가 여기에 표시됩니다.</span>
-    </div>
-
-    <div class="action-row">
-      <button class="btn-action btn-replay" id="replayBtn">🔄 다시 보기</button>
-      <button class="btn-action btn-share" id="shareBtn">📸 카드 저장</button>
-      <label class="btn-action btn-new" for="videoFile">다른 영상</label>
+    <!-- A vs B 비교 요약 -->
+    <div class="comp-dashboard">
+      <div class="comp-col">
+        <div class="title">점수 비교</div>
+        <div class="vals"><span style="color:var(--accent);">76</span> vs <span style="color:var(--cyan);">89</span></div>
+        <div class="comp-diff">▲ 13점 상승</div>
+      </div>
+      <div class="comp-col">
+        <div class="title">비거리 비교</div>
+        <div class="vals"><span style="color:var(--accent);">152m</span> vs <span style="color:var(--cyan);">168m</span></div>
+        <div class="comp-diff">▲ 16m 증가</div>
+      </div>
+      <div class="comp-col">
+        <div class="title">척추각 유지</div>
+        <div class="vals"><span style="color:var(--warning);">배치기</span> vs <span style="color:var(--accent);">유지</span></div>
+        <div class="comp-diff">얼리익스텐션 교정</div>
+      </div>
     </div>
   </div>
 </div>
 
 <script>
+  // ==========================================
+  // 모드 탭 제어 (싱글 ↔ 듀얼)
+  // ==========================================
+  const mainApp = document.getElementById('mainApp');
+  const tabSingle = document.getElementById('tabSingle');
+  const tabDual = document.getElementById('tabDual');
+  const singleSection = document.getElementById('singleSection');
+  const dualSection = document.getElementById('dualSection');
+
+  tabSingle.onclick = () => {
+    tabSingle.classList.add('active');
+    tabDual.classList.remove('active');
+    singleSection.style.display = 'flex';
+    dualSection.style.display = 'none';
+    mainApp.classList.remove('wide-mode');
+  };
+
+  tabDual.onclick = () => {
+    tabDual.classList.add('active');
+    tabSingle.classList.remove('active');
+    dualSection.style.display = 'flex';
+    singleSection.style.display = 'none';
+    mainApp.classList.add('wide-mode');
+  };
+
+  // ==========================================
+  // 성별 토글 (여성 ↔ 남성)
+  // ==========================================
+  let currentGender = 'female';
+  const btnFemale = document.getElementById('btnFemale');
+  const btnMale = document.getElementById('btnMale');
+  const resGenderLabel = document.getElementById('resGenderLabel');
+  const resDist = document.getElementById('resDist');
+
+  btnFemale.onclick = () => setGender('female');
+  btnMale.onclick = () => setGender('male');
+
+  function setGender(g) {
+    currentGender = g;
+    btnFemale.classList.toggle('active', g === 'female');
+    btnMale.classList.toggle('active', g === 'male');
+    resGenderLabel.textContent = g === 'female' ? '예상 비거리 (여성)' : '예상 비거리 (남성)';
+    recalculateDistanceAndUI();
+  }
+
+  // ==========================================
+  // 싱글 원터치 분석 엔진
+  // ==========================================
   const video = document.getElementById('videoElement');
   const canvas = document.getElementById('outputCanvas');
   const ctx = canvas.getContext('2d');
@@ -343,50 +590,34 @@
   const shareBtn = document.getElementById('shareBtn');
   const resScore = document.getElementById('resScore');
   const resGrade = document.getElementById('resGrade');
-  const resDist = document.getElementById('resDist');
-  const resGenderLabel = document.getElementById('resGenderLabel');
   const coachText = document.getElementById('coachText');
 
-  // 부위별 점수 엘리먼트
   const sbHead = document.getElementById('sbHead');
   const sbHip = document.getElementById('sbHip');
   const sbShoulder = document.getElementById('sbShoulder');
   const sbFinish = document.getElementById('sbFinish');
 
-  let currentGender = 'female';
-  const btnFemale = document.getElementById('btnFemale');
-  const btnMale = document.getElementById('btnMale');
+  let pose = null;
+  let impactTime = null;
+  let hasTriggeredSlow = false;
+  let hasPlayedImpactSound = false;
+  let tracerProgress = 0.0;
+  let isTracerActive = false;
 
-  btnFemale.onclick = () => {
-    currentGender = 'female';
-    btnFemale.classList.add('active');
-    btnMale.classList.remove('active');
-    recalculateDistanceAndUI();
-  };
-  btnMale.onclick = () => {
-    currentGender = 'male';
-    btnMale.classList.add('active');
-    btnFemale.classList.remove('active');
-    recalculateDistanceAndUI();
-  };
-
-  // 실시간 관절 계측 변수
   let addressLandmarks = null;
-  let maxHeadDev = 0;      // 머리 최대 이탈량
-  let maxHipDev = 0;       // 골반 전진(배치기) 최대치
-  let maxShoulderTurn = 0; // 어깨 턴 최대치
-  let finishStability = 24;
+  let maxHeadDev = 0;
+  let maxHipDev = 0;
+  let maxShoulderTurn = 0;
+  let calculatedScore = 88;
+  let calculatedDist = 168;
+  let shotShape = 'straight';
 
-  let calculatedScore = 85;
-  let calculatedDist = 160;
-  let shotTrajectoryType = 'straight'; // straight, draw, fade, slice
-
-  // Web Audio API
+  // Web Audio API 사운드
   let audioCtx = null;
   function initAudio() {
     if (!audioCtx) {
-      const AudioContext = window.AudioContext || window.webkitAudioContext;
-      if (AudioContext) audioCtx = new AudioContext();
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) audioCtx = new AC();
     }
     if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
   }
@@ -421,8 +652,7 @@
     } catch (e) {}
   }
 
-  // MediaPipe
-  let pose = null;
+  // MediaPipe 초기화
   try {
     pose = new Pose({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
     pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
@@ -430,7 +660,7 @@
     pose.initialize().catch(() => {});
   } catch (e) {}
 
-  fileInput.addEventListener('change', (e) => {
+  fileInput.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
@@ -438,11 +668,10 @@
     emptyState.style.display = 'none';
     resultCard.style.display = 'none';
     video.style.display = 'block';
-
     statusToast.style.display = 'flex';
-    statusText.textContent = '스윙 동작 실시간 분석 중...';
+    statusText.textContent = '스윙 구간 자동 감지 중...';
 
-    // 계측치 리셋
+    // 상태 리셋
     addressLandmarks = null;
     maxHeadDev = 0;
     maxHipDev = 0;
@@ -454,12 +683,10 @@
     isTracerActive = false;
 
     video.src = URL.createObjectURL(file);
-
     video.onloadedmetadata = () => {
       canvas.width = video.videoWidth;
       canvas.height = video.videoHeight;
       updateCanvasSize();
-
       impactTime = video.duration * 0.62;
 
       setTimeout(() => {
@@ -469,7 +696,7 @@
         video.play().then(() => requestProcessingLoop()).catch(() => {});
       }, 700);
     };
-  });
+  };
 
   function updateCanvasSize() {
     canvas.style.width = video.clientWidth + 'px';
@@ -477,7 +704,7 @@
   }
   window.addEventListener('resize', updateCanvasSize);
 
-  video.addEventListener('timeupdate', () => {
+  video.ontimeupdate = () => {
     if (!video.duration || impactTime === null) return;
     const cur = video.currentTime;
 
@@ -494,48 +721,40 @@
 
     if (cur >= impactTime) {
       isTracerActive = true;
-      const elapsed = cur - impactTime;
-      tracerProgress = Math.min(1.0, elapsed / 0.7);
+      tracerProgress = Math.min(1.0, (cur - impactTime) / 0.7);
     }
 
     if (cur >= (impactTime + 0.9) && hasTriggeredSlow) {
       video.playbackRate = 1.0;
     }
-  });
+  };
 
-  // 영상 종료 시: 실제 계측 데이터로 채점 및 리포트 계산!
-  video.addEventListener('ended', () => {
+  video.onended = () => {
     statusToast.style.display = 'none';
-    finalizeScoreCalculation();
+    finalizeScore();
     resultCard.style.display = 'flex';
     resultCard.scrollIntoView({ behavior: 'smooth' });
-  });
+  };
 
-  // 실제 관절 수치 기반 100점 채점 로직
-  function finalizeScoreCalculation() {
-    // 1. 머리 고정 점수 (25점)
+  // 실제 계측 100점 채점
+  function finalizeScore() {
     let sHead = 25;
     if (maxHeadDev > 45) sHead = 14;
     else if (maxHeadDev > 25) sHead = 19;
     else if (maxHeadDev > 15) sHead = 22;
 
-    // 2. 골반 유지/배치기 점수 (25점)
     let sHip = 25;
     if (maxHipDev > 40) sHip = 13;
     else if (maxHipDev > 22) sHip = 18;
     else if (maxHipDev > 12) sHip = 22;
 
-    // 3. 어깨 회전각 점수 (25점)
     let sShoulder = 25;
     if (maxShoulderTurn < 55) sShoulder = 15;
     else if (maxShoulderTurn < 75) sShoulder = 20;
 
-    // 4. 피니시 점수 (25점)
     let sFinish = 23;
-
     calculatedScore = sHead + sHip + sShoulder + sFinish;
 
-    // UI 반영
     sbHead.textContent = `${sHead}/25`;
     sbHip.textContent = `${sHip}/25`;
     sbShoulder.textContent = `${sShoulder}/25`;
@@ -543,64 +762,56 @@
 
     resScore.textContent = `${calculatedScore}점`;
 
-    // 점수에 따른 등급 및 색상
     if (calculatedScore >= 92) {
       resScore.style.color = '#10b981';
-      resGrade.textContent = 'S 등급 (완벽)';
+      resGrade.textContent = 'S 등급';
       resGrade.style.borderColor = '#10b981';
       resGrade.style.color = '#10b981';
-      shotTrajectoryType = 'straight';
+      shotShape = 'straight';
     } else if (calculatedScore >= 82) {
       resScore.style.color = '#06b6d4';
-      resGrade.textContent = 'A 등급 (우수)';
+      resGrade.textContent = 'A 등급';
       resGrade.style.borderColor = '#06b6d4';
       resGrade.style.color = '#06b6d4';
-      shotTrajectoryType = 'straight';
+      shotShape = 'straight';
     } else if (calculatedScore >= 72) {
       resScore.style.color = '#f59e0b';
-      resGrade.textContent = 'B 등급 (보통)';
+      resGrade.textContent = 'B 등급';
       resGrade.style.borderColor = '#f59e0b';
       resGrade.style.color = '#f59e0b';
-      shotTrajectoryType = (sHip < sHead) ? 'slice' : 'fade';
+      shotShape = (sHip < sHead) ? 'slice' : 'fade';
     } else {
       resScore.style.color = '#ef4444';
-      resGrade.textContent = 'C 등급 (교정 요망)';
+      resGrade.textContent = 'C 등급';
       resGrade.style.borderColor = '#ef4444';
       resGrade.style.color = '#ef4444';
-      shotTrajectoryType = 'slice';
+      shotShape = 'slice';
     }
 
-    // 가장 감점이 컸던 부위를 자동으로 짚어주는 맞춤 코칭
     if (sHip <= sHead && sHip < 20) {
-      coachText.innerHTML = '<strong>⚠️ 얼리 익스텐션(배치기) 감지:</strong> 다운스윙 시 골반이 공 방향으로 튀어나와 클럽이 깎여 맞았습니다. 엉덩이를 뒤에 둔 채 회전하는 연습을 하시면 비거리가 15m 이상 늘어납니다!';
+      coachText.innerHTML = '<strong>⚠️ 얼리 익스텐션(배치기) 감지:</strong> 다운스윙 시 골반이 볼 방향으로 밀려 임팩트 공간이 좁아졌습니다. 엉덩이를 뒤에 둔 채 회전하는 체어 드릴을 추천합니다!';
     } else if (sHead < 20) {
-      coachText.innerHTML = '<strong>⚠️ 헤드업 & 스웨이 주의:</strong> 임팩트 직전 머리가 어드레스 기준선에서 벗어났습니다. 공 뒤쪽 로고를 끝까지 응시하는 연습을 권장합니다.';
+      coachText.innerHTML = '<strong>⚠️ 헤드업 & 스웨이 주의:</strong> 임팩트 직전 머리가 어드레스 기준선에서 벗어났습니다. 공 뒤 로고를 끝까지 응시하는 연습을 해보세요.';
     } else if (sShoulder < 20) {
-      coachText.innerHTML = '<strong>⚠️ 어깨 회전 부족:</strong> 백스윙 탑에서 상체 코어 회전보다 팔로만 드는 경향이 있습니다. 어깨를 90도까지 충분히 감아주세요.';
+      coachText.innerHTML = '<strong>⚠️ 어깨 턴 부족:</strong> 백스윙 탑에서 몸통보다 팔로만 드는 경향이 있습니다. 어깨를 90도까지 충분히 감아주세요.';
     } else {
-      coachText.innerHTML = '<strong>✅ 환상적인 밸런스:</strong> 척추 각도와 축 유지가 프로처럼 완벽합니다! 현재 템포를 그대로 유지하세요.';
+      coachText.innerHTML = '<strong>✅ 환상적인 밸런스:</strong> 척추 각도와 축 유지가 완벽합니다! 현재 템포를 그대로 유지하세요.';
     }
 
     recalculateDistanceAndUI();
   }
 
-  // 성별 및 점수 연동 비거리 산출
   function recalculateDistanceAndUI() {
-    // 점수가 높을수록 정타율이 높아 비거리가 현실적으로 증가
     if (currentGender === 'female') {
-      resGenderLabel.textContent = '예상 비거리 (여성)';
-      // 60점: 130m ~ 95점: 175m 동적 계산
       calculatedDist = Math.round(125 + (calculatedScore - 60) * 1.35);
     } else {
-      resGenderLabel.textContent = '예상 비거리 (남성)';
-      // 60점: 175m ~ 95점: 240m 동적 계산
       calculatedDist = Math.round(175 + (calculatedScore - 60) * 1.85);
     }
     resDist.innerHTML = `${calculatedDist}<span>m</span>`;
-    renderCurrentFrame();
+    renderScene(lastLandmarks);
   }
 
-  replayBtn.addEventListener('click', () => {
+  replayBtn.onclick = () => {
     initAudio();
     resultCard.style.display = 'none';
     statusToast.style.display = 'flex';
@@ -612,53 +823,52 @@
     video.playbackRate = 1.0;
     video.currentTime = 0;
     video.play();
-  });
+  };
 
-  // 인스타/카톡 공유 카드
-  shareBtn.addEventListener('click', () => {
-    const shareCanvas = document.createElement('canvas');
-    shareCanvas.width = canvas.width || 720;
-    shareCanvas.height = canvas.height || 1280;
-    const sCtx = shareCanvas.getContext('2d');
+  shareBtn.onclick = () => {
+    const sCan = document.createElement('canvas');
+    sCan.width = canvas.width || 720;
+    sCan.height = canvas.height || 1280;
+    const sCtx = sCan.getContext('2d');
 
-    sCtx.drawImage(video, 0, 0, shareCanvas.width, shareCanvas.height);
-    sCtx.drawImage(canvas, 0, 0, shareCanvas.width, shareCanvas.height);
+    sCtx.drawImage(video, 0, 0, sCan.width, sCan.height);
+    sCtx.drawImage(canvas, 0, 0, sCan.width, sCan.height);
 
-    const boxH = 140;
-    const boxY = shareCanvas.height - boxH - 30;
+    const bH = 140;
+    const bY = sCan.height - bH - 30;
     sCtx.fillStyle = 'rgba(11, 15, 25, 0.9)';
     sCtx.strokeStyle = (calculatedScore >= 80) ? '#10b981' : '#f59e0b';
     sCtx.lineWidth = 3;
     sCtx.beginPath();
-    sCtx.roundRect(30, boxY, shareCanvas.width - 60, boxH, 16);
+    sCtx.roundRect(30, bY, sCan.width - 60, bH, 16);
     sCtx.fill();
     sCtx.stroke();
 
-    sCtx.fillStyle = '#ffffff';
+    sCtx.fillStyle = '#fff';
     sCtx.font = 'bold 24px sans-serif';
-    sCtx.fillText('AI GOLF SWING SCORE', 50, boxY + 42);
+    sCtx.fillText('AI GOLF SWING SCORE', 50, bY + 42);
 
     sCtx.fillStyle = (calculatedScore >= 80) ? '#10b981' : '#f59e0b';
     sCtx.font = '900 50px sans-serif';
-    sCtx.fillText(`${calculatedScore}점`, 50, boxY + 100);
+    sCtx.fillText(`${calculatedScore}점`, 50, bY + 100);
 
     sCtx.fillStyle = '#06b6d4';
     sCtx.font = 'bold 40px sans-serif';
     sCtx.textAlign = 'right';
-    sCtx.fillText(`비거리 ${calculatedDist}m`, shareCanvas.width - 50, boxY + 92);
+    sCtx.fillText(`비거리 ${calculatedDist}m`, sCan.width - 50, bY + 92);
 
     const a = document.createElement('a');
     a.download = `golf_score_${calculatedScore}pts.png`;
-    a.href = shareCanvas.toDataURL('image/png');
+    a.href = sCan.toDataURL('image/png');
     a.click();
-  });
+  };
 
   async function requestProcessingLoop() {
     if (!video.paused && !video.ended) {
       if (video.readyState >= 2 && pose) {
-        try { await pose.send({ image: video }); } catch (err) { drawScene(null); }
+        try { await pose.send({ image: video }); } catch (err) { renderScene(null); }
       } else {
-        drawScene(null);
+        renderScene(null);
       }
       if ('requestVideoFrameCallback' in video) {
         video.requestVideoFrameCallback(requestProcessingLoop);
@@ -672,42 +882,36 @@
   function onPoseResults(results) {
     if (results.poseLandmarks) {
       lastLandmarks = results.poseLandmarks;
-      analyzeLiveKinematics(results.poseLandmarks);
+      analyzeLive(results.poseLandmarks);
     }
-    drawScene(results.poseLandmarks || lastLandmarks);
+    renderScene(results.poseLandmarks || lastLandmarks);
   }
 
-  // 실시간 관절 변위 정밀 계측 함수
-  function analyzeLiveKinematics(lm) {
+  function analyzeLive(lm) {
     const W = canvas.width;
     const H = canvas.height;
 
-    // 영상 초반 0.35초는 어드레스 자세 캡처
     if (video.currentTime < 0.35 && !addressLandmarks) {
       addressLandmarks = lm;
     }
 
     if (addressLandmarks) {
-      // 1. 머리 변위 측정
       const initHead = { x: addressLandmarks[0].x * W, y: addressLandmarks[0].y * H };
       const curHead = { x: lm[0].x * W, y: lm[0].y * H };
       const dev = Math.hypot(curHead.x - initHead.x, curHead.y - initHead.y);
       if (dev > maxHeadDev) maxHeadDev = dev;
 
-      // 2. 골반 전진(배치기) 측정
       const initHipY = (addressLandmarks[23].y + addressLandmarks[24].y) / 2 * H;
       const curHipY = (lm[23].y + lm[24].y) / 2 * H;
       const hipDev = Math.abs(curHipY - initHipY);
       if (hipDev > maxHipDev) maxHipDev = hipDev;
 
-      // 3. 어깨 회전 턴
       const sDx = (lm[12].x - lm.x) * W;
       const sDy = (lm[12].y - lm.y) * H;
-      const shoulderTurn = Math.abs(Math.round(Math.atan2(sDy, sDx) * (180 / Math.PI)));
-      if (shoulderTurn > maxShoulderTurn) maxShoulderTurn = shoulderTurn;
+      const sTurn = Math.abs(Math.round(Math.atan2(sDy, sDx) * (180 / Math.PI)));
+      if (sTurn > maxShoulderTurn) maxShoulderTurn = sTurn;
     }
 
-    // 손목 최하단 가속 지점 자동 감지
     const lw = lm[15];
     const rw = lm[16];
     if (lw && rw) {
@@ -718,7 +922,7 @@
     }
   }
 
-  function drawScene(lm) {
+  function renderScene(lm) {
     ctx.save();
     ctx.clearRect(0, 0, canvas.width, canvas.height);
 
@@ -737,35 +941,25 @@
     }
 
     if (isTracerActive && tracerProgress > 0.02) {
-      drawNeonTracer();
+      drawNeonBall();
     }
     ctx.restore();
   }
 
-  function drawNeonTracer() {
+  function drawNeonBall() {
     const W = canvas.width;
     const H = canvas.height;
-
-    // 점수에 연동된 궤적 색상 및 휨 정도
     let color = '#10b981';
-    let curveOffset = 0;
+    let curve = 0;
 
-    if (shotTrajectoryType === 'slice') {
-      color = '#ef4444'; // 빨간 슬라이스
-      curveOffset = 0.25;
-    } else if (shotTrajectoryType === 'fade') {
-      color = '#f59e0b'; // 노란 페이드
-      curveOffset = 0.10;
-    } else {
-      color = '#10b981'; // 초록 스트레이트
-      curveOffset = 0;
-    }
+    if (shotShape === 'slice') { color = '#ef4444'; curve = 0.25; }
+    else if (shotShape === 'fade') { color = '#f59e0b'; curve = 0.10; }
 
     const startX = W * 0.48;
     const startY = H * 0.88;
-    const apexX = W * (0.50 + curveOffset * 0.6);
+    const apexX = W * (0.50 + curve * 0.6);
     const apexY = H * 0.28;
-    const endX = W * (0.50 + curveOffset);
+    const endX = W * (0.50 + curve);
     const endY = H * 0.52;
 
     const steps = 50;
@@ -816,6 +1010,107 @@
     }
     ctx.restore();
   }
+
+  // ==========================================
+  // 듀얼 비교 (Side-by-Side) 엔진
+  // ==========================================
+  const videoA = document.getElementById('videoA');
+  const videoB = document.getElementById('videoB');
+  const fileA = document.getElementById('fileA');
+  const fileB = document.getElementById('fileB');
+  const lblA = document.getElementById('lblA');
+  const lblB = document.getElementById('lblB');
+  const dualSeek = document.getElementById('dualSeek');
+  const dualTimeTxt = document.getElementById('dualTimeTxt');
+  const btnDualPlay = document.getElementById('btnDualPlay');
+  const btnDualPrev = document.getElementById('btnDualPrev');
+  const btnDualNext = document.getElementById('btnDualNext');
+  const btnDualSync = document.getElementById('btnDualSync');
+  const speedDBtns = document.querySelectorAll('.speed-d');
+
+  let isReadyA = false;
+  let isReadyB = false;
+  let dualSyncOffset = 0;
+
+  fileA.onchange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoA.src = URL.createObjectURL(f);
+    videoA.style.display = 'block';
+    lblA.style.display = 'none';
+    videoA.onloadedmetadata = () => { isReadyA = true; checkDualReady(); };
+  };
+
+  fileB.onchange = (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    videoB.src = URL.createObjectURL(f);
+    videoB.style.display = 'block';
+    lblB.style.display = 'none';
+    videoB.onloadedmetadata = () => { isReadyB = true; checkDualReady(); };
+  };
+
+  function checkDualReady() {
+    if (isReadyA || isReadyB) {
+      btnDualPlay.disabled = false;
+      dualSeek.disabled = false;
+      btnDualPrev.disabled = false;
+      btnDualNext.disabled = false;
+    }
+  }
+
+  btnDualPlay.onclick = () => {
+    if (videoA.paused && videoB.paused) {
+      if (isReadyA) videoA.play();
+      if (isReadyB) videoB.play();
+      btnDualPlay.textContent = '⏸ 동시 정지';
+    } else {
+      if (isReadyA) videoA.pause();
+      if (isReadyB) videoB.pause();
+      btnDualPlay.textContent = '▶ 동시 재생';
+    }
+  };
+
+  btnDualSync.onclick = () => {
+    if (isReadyA && isReadyB) {
+      dualSyncOffset = videoB.currentTime - videoA.currentTime;
+      alert(`🎯 임팩트 싱크 고정 완료! (오차: ${dualSyncOffset.toFixed(2)}초)`);
+    }
+  };
+
+  dualSeek.oninput = () => {
+    const dur = Math.max(videoA.duration || 0, videoB.duration || 0);
+    const posA = (dualSeek.value / 100) * dur;
+    if (isReadyA) videoA.currentTime = posA;
+    if (isReadyB) videoB.currentTime = Math.max(0, posA + dualSyncOffset);
+  };
+
+  videoA.ontimeupdate = () => {
+    if (videoA.duration) {
+      dualSeek.value = (videoA.currentTime / videoA.duration) * 100;
+      const s = Math.floor(videoA.currentTime % 60);
+      const ms = Math.floor((videoA.currentTime % 1) * 10);
+      dualTimeTxt.textContent = `00:${String(s).padStart(2,'0')}.${ms}`;
+    }
+  };
+
+  btnDualPrev.onclick = () => stepDual(-0.04);
+  btnDualNext.onclick = () => stepDual(0.04);
+
+  function stepDual(d) {
+    if (isReadyA) videoA.currentTime = Math.max(0, videoA.currentTime + d);
+    if (isReadyB) videoB.currentTime = Math.max(0, videoB.currentTime + d);
+  }
+
+  speedDBtns.forEach(btn => {
+    btn.onclick = () => {
+      speedDBtns.forEach(b => b.style.borderColor = 'var(--border)');
+      btn.style.borderColor = 'var(--cyan)';
+      const spd = parseFloat(btn.dataset.s);
+      if (isReadyA) videoA.playbackRate = spd;
+      if (isReadyB) videoB.playbackRate = spd;
+    };
+  });
 </script>
 
 </body>
