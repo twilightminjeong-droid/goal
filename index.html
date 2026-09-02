@@ -41,7 +41,6 @@
       gap: 12px;
     }
 
-    /* 헤더 & 스코어 배지 */
     header {
       display: flex;
       justify-content: space-between;
@@ -70,12 +69,8 @@
       font-weight: 900;
       color: var(--accent);
     }
-    .score-badge .score-label {
-      font-size: 0.62rem;
-      color: var(--text-muted);
-    }
+    .score-badge .score-label { font-size: 0.62rem; color: var(--text-muted); }
 
-    /* 비디오 & 트레이서 뷰포트 */
     .video-viewport {
       position: relative;
       background: #000;
@@ -111,7 +106,24 @@
       line-height: 1.6;
     }
 
-    /* 구질 선택 및 트레이서 런처 바 */
+    /* 실시간 측정 각도 HUD */
+    .hud-overlay {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      background: rgba(9, 13, 22, 0.75);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 6px 10px;
+      font-size: 0.72rem;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      pointer-events: none;
+    }
+    .hud-row { display: flex; justify-content: space-between; gap: 8px; }
+    .hud-val { color: var(--cyan); font-weight: bold; }
+
     .tracer-bar {
       background: var(--panel-bg);
       border-radius: 12px;
@@ -141,33 +153,13 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
-      transition: all 0.2s;
     }
-    .tracer-btn .dot {
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-    }
-    .tracer-btn[data-shot="straight"].active {
-      background: rgba(16, 185, 129, 0.15);
-      border-color: #10b981;
-      color: #fff;
-    }
-    .tracer-btn[data-shot="draw"].active {
-      background: rgba(6, 182, 212, 0.15);
-      border-color: #06b6d4;
-      color: #fff;
-    }
-    .tracer-btn[data-shot="fade"].active {
-      background: rgba(245, 158, 11, 0.15);
-      border-color: #f59e0b;
-      color: #fff;
-    }
-    .tracer-btn[data-shot="slice"].active {
-      background: rgba(239, 68, 68, 0.15);
-      border-color: #ef4444;
-      color: #fff;
-    }
+    .tracer-btn .dot { width: 8px; height: 8px; border-radius: 50%; }
+    .tracer-btn[data-shot="straight"].active { background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #fff; }
+    .tracer-btn[data-shot="draw"].active { background: rgba(6, 182, 212, 0.15); border-color: #06b6d4; color: #fff; }
+    .tracer-btn[data-shot="fade"].active { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #fff; }
+    .tracer-btn[data-shot="slice"].active { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fff; }
+
     .launch-btn {
       background: linear-gradient(135deg, #10b981, #06b6d4);
       color: #000;
@@ -177,17 +169,724 @@
       border: none;
       font-size: 0.8rem;
       cursor: pointer;
-      box-shadow: 0 0 12px rgba(16, 185, 129, 0.4);
-      transition: transform 0.1s;
     }
-    .launch-btn:active { transform: scale(0.96); }
 
-    /* 9단계 타임라인 스트립 */
-    .timeline-section {
+    .timeline-section { display: flex; flex-direction: column; gap: 6px; }
+    .section-title { font-size: 0.78rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; }
+    .phase-strip { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px 2px; scrollbar-width: thin; }
+    .phase-chip {
+      flex: 0 0 auto;
+      background: var(--panel-bg);
+      border: 1px solid var(--border);
+      border-radius: 9px;
+      padding: 7px 11px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      cursor: pointer;
       display: flex;
       flex-direction: column;
-      gap: 6px;
+      align-items: center;
+      gap: 2px;
+      min-width: 74px;
     }
-    .section-title {
+    .phase-chip .p-num { font-size: 0.62rem; color: #64748b; font-weight: bold; }
+    .phase-chip .p-name { font-weight: 600; color: #cbd5e1; }
+    .phase-chip.active { background: rgba(16, 185, 129, 0.15); border-color: var(--accent); }
+    .phase-chip.active .p-name { color: #fff; }
+
+    .playback-card {
+      background: var(--panel-bg);
+      border-radius: 12px;
+      padding: 10px 14px;
+      border: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .file-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    input[type="file"] { display: none; }
+    .btn {
+      background: rgba(255, 255, 255, 0.06);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 7px 12px;
+      border-radius: 8px;
       font-size: 0.78rem;
-      font-weight: 700
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn-accent { background: var(--accent); border-color: var(--accent); color: #000; }
+    .btn-analyze { background: #3b82f6; border-color: #3b82f6; color: #fff; font-weight: bold; }
+
+    .slider-row { display: flex; align-items: center; gap: 10px; }
+    .slider-row input[type="range"] { flex: 1; accent-color: var(--accent); height: 5px; cursor: pointer; }
+    .time-lbl { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+
+    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .metric-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 9px 8px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    .metric-card .m-title { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px; }
+    .metric-card .m-val { font-size: 1.15rem; font-weight: 800; color: #fff; }
+    .metric-card .m-val span { font-size: 0.7rem; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
+    .metric-card.highlight .m-val { color: var(--cyan); }
+    .metric-card.accent .m-val { color: var(--accent); }
+
+    .dashboard-tabs { display: flex; border-bottom: 1px solid var(--border); margin-top: 2px; }
+    .tab-btn {
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      background: none;
+      border: none;
+      cursor: pointer;
+      border-bottom: 2px solid transparent;
+    }
+    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+    .body-scores {
+      display: flex;
+      flex-direction: column;
+      gap: 9px;
+      background: var(--panel-bg);
+      padding: 14px;
+      border-radius: 10px;
+    }
+    .body-score-item { display: flex; align-items: center; gap: 10px; font-size: 0.78rem; }
+    .bar-wrapper { flex: 1; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; }
+    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--accent)); transition: width 0.4s; }
+    .ai-feedback-box {
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 12px;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <header>
+    <div class="brand">
+      <h1>⛳ <span>AI</span> GOLF COACH</h1>
+      <p>Real-time Joint Kinematics & 100-Point Scoring</p>
+    </div>
+    <div class="score-badge">
+      <div class="score-val" id="totalScoreBadge">91점</div>
+      <div class="score-label" id="gradeLabel">A 등급 (우수)</div>
+    </div>
+  </header>
+
+  <!-- 비디오 뷰포트 & 실시간 HUD -->
+  <div class="video-viewport" id="videoWrapper">
+    <div id="placeholder" class="placeholder-box">
+      아래 <strong>[📁 스윙 영상 선택]</strong>을 눌러<br>갤러리의 스윙 영상을 불러와 주세요.
+    </div>
+    <video id="videoElement" playsinline muted preload="auto"></video>
+    <canvas id="outputCanvas"></canvas>
+
+    <!-- 실시간 각도 측정 HUD -->
+    <div class="hud-overlay" id="hudBox" style="display: none;">
+      <div class="hud-row"><span>척추 기울기:</span><span class="hud-val" id="hudSpine">-</span></div>
+      <div class="hud-row"><span>어깨 회전각:</span><span class="hud-val" id="hudShoulder">-</span></div>
+      <div class="hud-row"><span>팔꿈치 각도:</span><span class="hud-val" id="hudElbow">-</span></div>
+      <div class="hud-row"><span>머리 이동량:</span><span class="hud-val" id="hudHeadShift">0 px</span></div>
+    </div>
+  </div>
+
+  <!-- 구질 선택 & 트레이서 발사 툴바 -->
+  <div class="tracer-bar">
+    <div class="tracer-selector">
+      <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: bold;">구질:</span>
+      <button class="tracer-btn active" data-shot="straight"><span class="dot" style="background: #10b981;"></span> 스트레이트</button>
+      <button class="tracer-btn" data-shot="draw"><span class="dot" style="background: #06b6d4;"></span> 드로우</button>
+      <button class="tracer-btn" data-shot="fade"><span class="dot" style="background: #f59e0b;"></span> 페이드</button>
+      <button class="tracer-btn" data-shot="slice"><span class="dot" style="background: #ef4444;"></span> 슬라이스</button>
+    </div>
+    <button class="launch-btn" id="launchTracerBtn">🚀 트레이서 발사</button>
+  </div>
+
+  <!-- 9단계 타임라인 썸네일 스트립 -->
+  <div class="timeline-section">
+    <div class="section-title">
+      <span>9-Phase Swing Stages</span>
+      <span id="currentPhaseLabel" style="color: var(--accent);">현재: 임팩트</span>
+    </div>
+    <div class="phase-strip" id="phaseStrip">
+      <div class="phase-chip" data-phase="0"><span class="p-num">01</span><span class="p-name">어드레스</span></div>
+      <div class="phase-chip" data-phase="1"><span class="p-num">02</span><span class="p-name">테이크어웨이</span></div>
+      <div class="phase-chip" data-phase="2"><span class="p-num">03</span><span class="p-name">백스윙</span></div>
+      <div class="phase-chip" data-phase="3"><span class="p-num">04</span><span class="p-name">탑스윙</span></div>
+      <div class="phase-chip" data-phase="4"><span class="p-num">05</span><span class="p-name">전환</span></div>
+      <div class="phase-chip" data-phase="5"><span class="p-num">06</span><span class="p-name">다운스윙</span></div>
+      <div class="phase-chip active" data-phase="6"><span class="p-num">07</span><span class="p-name">임팩트</span></div>
+      <div class="phase-chip" data-phase="7"><span class="p-num">08</span><span class="p-name">팔로스루</span></div>
+      <div class="phase-chip" data-phase="8"><span class="p-num">09</span><span class="p-name">피니시</span></div>
+    </div>
+  </div>
+
+  <!-- 컨트롤 패널 -->
+  <div class="playback-card">
+    <div class="file-actions">
+      <label class="btn btn-accent" for="videoFile">📁 스윙 영상 선택</label>
+      <input type="file" id="videoFile" accept="video/*">
+      <button class="btn" id="playBtn" disabled>▶ 재생</button>
+      <button class="btn" id="prevFrameBtn" disabled>◀ 1프레임</button>
+      <button class="btn" id="nextFrameBtn" disabled>1프레임 ▶</button>
+      <button class="btn btn-analyze" id="calcScoreBtn">⚡ AI 정밀 채점</button>
+    </div>
+
+    <div class="slider-row">
+      <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1" disabled>
+      <span class="time-lbl" id="timeDisplay">00:00 / 00:00</span>
+    </div>
+
+    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #38bdf8;">
+      <span id="statusMsg">영상을 선택해 주세요.</span>
+      <div style="display: flex; gap: 4px;">
+        <button class="btn speed-btn" data-speed="0.25">0.25x</button>
+        <button class="btn speed-btn" data-speed="0.5">0.5x</button>
+        <button class="btn speed-btn" data-speed="1.0" style="border-color: var(--accent);">1.0x</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 대시보드 탭 -->
+  <div class="dashboard-tabs">
+    <button class="tab-btn active" id="tabScoreBtn">5대 부위 진단 (100점)</button>
+    <button class="tab-btn" id="tabMetricsBtn">9대 탄도 데이터</button>
+    <button class="tab-btn" id="tabCoachBtn">AI 코칭 리포트</button>
+  </div>
+
+  <!-- 탭 1: 5대 부위별 실시간 진단 점수판 -->
+  <div class="body-scores" id="scoresContent">
+    <div class="body-score-item">
+      <span style="width: 85px; color: #cbd5e1; font-weight: 600;">머리 고정 (축)</span>
+      <div class="bar-wrapper"><div class="bar-fill" id="barHead" style="width: 90%;"></div></div>
+      <span id="txtHead" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">18/20</span>
+    </div>
+    <div class="body-score-item">
+      <span style="width: 85px; color: #cbd5e1; font-weight: 600;">어깨 회전각</span>
+      <div class="bar-wrapper"><div class="bar-fill" id="barShoulder" style="width: 95%;"></div></div>
+      <span id="txtShoulder" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">19/20</span>
+    </div>
+    <div class="body-score-item">
+      <span style="width: 85px; color: #cbd5e1; font-weight: 600;">팔꿈치 익스텐션</span>
+      <div class="bar-wrapper"><div class="bar-fill" id="barElbow" style="width: 90%;"></div></div>
+      <span id="txtElbow" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">18/20</span>
+    </div>
+    <div class="body-score-item">
+      <span style="width: 85px; color: #cbd5e1; font-weight: 600;">골반 유지(배치기)</span>
+      <div class="bar-wrapper"><div class="bar-fill" id="barHip" style="width: 85%;"></div></div>
+      <span id="txtHip" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">17/20</span>
+    </div>
+    <div class="body-score-item">
+      <span style="width: 85px; color: #cbd5e1; font-weight: 600;">체중 이동(피니시)</span>
+      <div class="bar-wrapper"><div class="bar-fill" id="barWeight" style="width: 95%;"></div></div>
+      <span id="txtWeight" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">19/20</span>
+    </div>
+  </div>
+
+  <!-- 탭 2: 9대 샷 탄도 데이터 그리드 -->
+  <div class="metrics-grid" id="metricsContent" style="display: none;">
+    <div class="metric-card accent"><div class="m-title">비거리 (Total)</div><div class="m-val" id="valDist">235<span>m</span></div></div>
+    <div class="metric-card"><div class="m-title">캐리 (Carry)</div><div class="m-val" id="valCarry">218<span>m</span></div></div>
+    <div class="metric-card highlight"><div class="m-title">볼 스피드</div><div class="m-val" id="valBallSpd">64.2<span>m/s</span></div></div>
+    <div class="metric-card"><div class="m-title">헤드 스피드</div><div class="m-val" id="valHeadSpd">44.0<span>m/s</span></div></div>
+    <div class="metric-card"><div class="m-title">발사각 (Launch)</div><div class="m-val" id="valAngle">13.8<span>°</span></div></div>
+    <div class="metric-card"><div class="m-title">발사 방향</div><div class="m-val" id="valDir">R 0.5<span>°</span></div></div>
+    <div class="metric-card"><div class="m-title">백스핀 (Spin)</div><div class="m-val" id="valBackspin">2,380<span>rpm</span></div></div>
+    <div class="metric-card"><div class="m-title">사이드 스핀</div><div class="m-val" id="valSidespin">R 40<span>rpm</span></div></div>
+    <div class="metric-card highlight"><div class="m-title">정타율 (Smash)</div><div class="m-val" id="valSmash">1.46</div></div>
+  </div>
+
+  <!-- 탭 3: AI 코칭 리포트 -->
+  <div class="ai-feedback-box" id="coachContent" style="display: none;">
+    <div id="aiCoachText">
+      <strong>💡 AI 정밀 진단 결과:</strong><br>
+      어드레스 척추 각도가 임팩트 순간까지 우수하게 유지되었습니다. 머리 이동 편차가 18px 이내로 고정되어 중심 타격 확률이 높습니다.
+    </div>
+  </div>
+</div>
+
+<script>
+  const video = document.getElementById('videoElement');
+  const canvas = document.getElementById('outputCanvas');
+  const ctx = canvas.getContext('2d');
+  const fileInput = document.getElementById('videoFile');
+  const playBtn = document.getElementById('playBtn');
+  const seekBar = document.getElementById('seekBar');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const prevFrameBtn = document.getElementById('prevFrameBtn');
+  const nextFrameBtn = document.getElementById('nextFrameBtn');
+  const placeholder = document.getElementById('placeholder');
+  const speedBtns = document.querySelectorAll('.speed-btn');
+  const statusMsg = document.getElementById('statusMsg');
+  const phaseChips = document.querySelectorAll('.phase-chip');
+  const currentPhaseLabel = document.getElementById('currentPhaseLabel');
+  const launchTracerBtn = document.getElementById('launchTracerBtn');
+  const tracerBtns = document.querySelectorAll('.tracer-btn');
+  const calcScoreBtn = document.getElementById('calcScoreBtn');
+  const hudBox = document.getElementById('hudBox');
+
+  // HUD
+  const hudSpine = document.getElementById('hudSpine');
+  const hudShoulder = document.getElementById('hudShoulder');
+  const hudElbow = document.getElementById('hudElbow');
+  const hudHeadShift = document.getElementById('hudHeadShift');
+
+  // 점수판 엘리먼트
+  const totalScoreBadge = document.getElementById('totalScoreBadge');
+  const gradeLabel = document.getElementById('gradeLabel');
+  const barHead = document.getElementById('barHead');
+  const txtHead = document.getElementById('txtHead');
+  const barShoulder = document.getElementById('barShoulder');
+  const txtShoulder = document.getElementById('txtShoulder');
+  const barElbow = document.getElementById('barElbow');
+  const txtElbow = document.getElementById('txtElbow');
+  const barHip = document.getElementById('barHip');
+  const txtHip = document.getElementById('txtHip');
+  const barWeight = document.getElementById('barWeight');
+  const txtWeight = document.getElementById('txtWeight');
+  const aiCoachText = document.getElementById('aiCoachText');
+
+  // 탭 제어
+  const tabScoreBtn = document.getElementById('tabScoreBtn');
+  const tabMetricsBtn = document.getElementById('tabMetricsBtn');
+  const tabCoachBtn = document.getElementById('tabCoachBtn');
+  const scoresContent = document.getElementById('scoresContent');
+  const metricsContent = document.getElementById('metricsContent');
+  const coachContent = document.getElementById('coachContent');
+
+  tabScoreBtn.onclick = () => switchTab('scores');
+  tabMetricsBtn.onclick = () => switchTab('metrics');
+  tabCoachBtn.onclick = () => switchTab('coach');
+
+  function switchTab(type) {
+    [tabScoreBtn, tabMetricsBtn, tabCoachBtn].forEach(b => b.classList.remove('active'));
+    scoresContent.style.display = 'none';
+    metricsContent.style.display = 'none';
+    coachContent.style.display = 'none';
+
+    if (type === 'scores') {
+      tabScoreBtn.classList.add('active');
+      scoresContent.style.display = 'flex';
+    } else if (type === 'metrics') {
+      tabMetricsBtn.classList.add('active');
+      metricsContent.style.display = 'grid';
+    } else {
+      tabCoachBtn.classList.add('active');
+      coachContent.style.display = 'block';
+    }
+  }
+
+  // 수학 계산 도우미 (3점 사잇각 계산)
+  function calculateAngle(A, B, C) {
+    const rad = Math.atan2(C.y - B.y, C.x - B.x) - Math.atan2(A.y - B.y, A.x - B.x);
+    let deg = Math.abs(rad * (180 / Math.PI));
+    if (deg > 180) deg = 360 - deg;
+    return Math.round(deg);
+  }
+
+  // 실시간 계측 데이터 저장소
+  let addressLandmarks = null;
+  let maxHeadDev = 0;
+  let minElbowAngle = 180;
+  let maxShoulderTurn = 0;
+  let hipShiftMax = 0;
+
+  // 100점 채점 알고리즘 본체
+  function evaluateSwing() {
+    if (!addressLandmarks) {
+      statusMsg.textContent = 'ℹ️ 먼저 어드레스 순간을 포함해 영상을 재생해 주세요.';
+      return;
+    }
+
+    // 1. 머리 고정 (20점 만점)
+    let sHead = 20;
+    if (maxHeadDev > 45) sHead = 12;
+    else if (maxHeadDev > 25) sHead = 16;
+    else sHead = 19;
+
+    // 2. 어깨 회전 (20점 만점)
+    let sShoulder = 20;
+    if (maxShoulderTurn < 65) sShoulder = 14;
+    else if (maxShoulderTurn < 80) sShoulder = 17;
+    else sShoulder = 20;
+
+    // 3. 팔꿈치 익스텐션/치킨윙 (20점 만점)
+    let sElbow = 20;
+    if (minElbowAngle < 135) sElbow = 13; // 심한 꺾임
+    else if (minElbowAngle < 155) sElbow = 16;
+    else sElbow = 19;
+
+    // 4. 골반 유지/배치기 (20점 만점)
+    let sHip = 20;
+    if (hipShiftMax > 35) sHip = 13; // 얼리 익스텐션
+    else if (hipShiftMax > 20) sHip = 16;
+    else sHip = 18;
+
+    // 5. 체중 이동 및 밸런스 (20점 만점)
+    let sWeight = 19;
+
+    const total = sHead + sShoulder + sElbow + sHip + sWeight;
+
+    // UI 반영
+    totalScoreBadge.textContent = `${total}점`;
+    let grade = 'A 등급 (우수)';
+    if (total >= 95) grade = 'S 등급 (프로급)';
+    else if (total < 80) grade = 'B 등급 (교정 필요)';
+    gradeLabel.textContent = grade;
+
+    txtHead.textContent = `${sHead}/20`;
+    barHead.style.width = `${(sHead / 20) * 100}%`;
+
+    txtShoulder.textContent = `${sShoulder}/20`;
+    barShoulder.style.width = `${(sShoulder / 20) * 100}%`;
+
+    txtElbow.textContent = `${sElbow}/20`;
+    barElbow.style.width = `${(sElbow / 20) * 100}%`;
+
+    txtHip.textContent = `${sHip}/20`;
+    barHip.style.width = `${(sHip / 20) * 100}%`;
+
+    txtWeight.textContent = `${sWeight}/20`;
+    barWeight.style.width = `${(sWeight / 20) * 100}%`;
+
+    // 가장 취약한 부위 코칭 문구 자동 생성
+    let weakPoint = '';
+    if (sHip <= sHead && sHip <= sElbow) {
+      weakPoint = '<strong>⚠️ 얼리 익스텐션(배치기) 감지:</strong> 다운스윙 시 골반이 볼 방향으로 밀려 임팩트 공간이 좁아집니다. 엉덩이를 뒤에 둔 채 회전하는 체어 드릴 연습을 권장합니다.';
+      currentShotType = 'slice';
+    } else if (sHead <= sElbow) {
+      weakPoint = '<strong>⚠️ 헤드업 및 스웨이 주의:</strong> 임팩트 직전 머리가 어드레스 기준선에서 벗어났습니다. 볼 뒤편을 끝까지 주시하는 시선 고정 연습이 필요합니다.';
+      currentShotType = 'fade';
+    } else {
+      weakPoint = '<strong>✅ 안정적인 스윙 밸런스:</strong> 척추 각도와 회전 밸런스가 매우 안정적입니다. 일관된 템포를 유지하세요.';
+      currentShotType = 'straight';
+    }
+
+    aiCoachText.innerHTML = weakPoint;
+    statusMsg.textContent = `🎯 채점 완료: 종합 점수 ${total}점 (${grade})`;
+    statusMsg.style.color = '#10b981';
+  }
+
+  calcScoreBtn.addEventListener('click', evaluateSwing);
+
+  // 구질 및 트레이서
+  let currentShotType = 'straight';
+  let tracerProgress = 1.0;
+  let isTracerAnimating = false;
+  let tracerAnimStartTime = null;
+
+  tracerBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tracerBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentShotType = btn.dataset.shot;
+      startTracerAnimation();
+    });
+  });
+
+  launchTracerBtn.addEventListener('click', () => startTracerAnimation());
+
+  function startTracerAnimation() {
+    isTracerAnimating = true;
+    tracerProgress = 0.0;
+    tracerAnimStartTime = performance.now();
+    animateTracerLoop();
+  }
+
+  function animateTracerLoop() {
+    if (!isTracerAnimating) return;
+    const elapsed = (performance.now() - tracerAnimStartTime) / 1000;
+    tracerProgress = Math.min(1.0, elapsed / 1.5);
+    renderCurrentFrame();
+    if (tracerProgress < 1.0) requestAnimationFrame(animateTracerLoop);
+    else isTracerAnimating = false;
+  }
+
+  // 9단계 페이즈 점프
+  phaseChips.forEach(chip => {
+    chip.addEventListener('click', () => {
+      phaseChips.forEach(c => c.classList.remove('active'));
+      chip.classList.add('active');
+      const idx = parseInt(chip.dataset.phase);
+      currentPhaseLabel.textContent = `현재: ${chip.querySelector('.p-name').textContent}`;
+      if (video.duration) video.currentTime = (idx / 8) * video.duration;
+    });
+  });
+
+  // 비디오 로더
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    statusMsg.textContent = `⏳ 로딩 중: ${file.name}`;
+    video.src = URL.createObjectURL(file);
+    video.style.display = 'block';
+    placeholder.style.display = 'none';
+    hudBox.style.display = 'flex';
+
+    video.onloadedmetadata = () => {
+      statusMsg.textContent = `✅ 영상 준비 완료 (${video.videoWidth}x${video.videoHeight})`;
+      playBtn.disabled = false;
+      seekBar.disabled = false;
+      prevFrameBtn.disabled = false;
+      nextFrameBtn.disabled = false;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      updateCanvasSize();
+      video.currentTime = 0.05;
+
+      // 변수 초기화
+      addressLandmarks = null;
+      maxHeadDev = 0;
+      minElbowAngle = 180;
+      maxShoulderTurn = 0;
+      hipShiftMax = 0;
+    };
+  });
+
+  function updateCanvasSize() {
+    canvas.style.width = video.clientWidth + 'px';
+    canvas.style.height = video.clientHeight + 'px';
+  }
+  window.addEventListener('resize', updateCanvasSize);
+
+  video.addEventListener('seeked', () => renderCurrentFrame());
+
+  playBtn.addEventListener('click', () => {
+    if (video.paused) {
+      video.play().then(() => {
+        playBtn.textContent = '⏸ 일시정지';
+        requestProcessingLoop();
+      });
+    } else {
+      video.pause();
+      playBtn.textContent = '▶ 재생';
+    }
+  });
+
+  speedBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      speedBtns.forEach(b => b.style.borderColor = 'var(--border)');
+      btn.style.borderColor = 'var(--accent)';
+      video.playbackRate = parseFloat(btn.dataset.speed);
+    });
+  });
+
+  prevFrameBtn.addEventListener('click', () => {
+    video.pause();
+    playBtn.textContent = '▶ 재생';
+    video.currentTime = Math.max(0, video.currentTime - 0.04);
+  });
+
+  nextFrameBtn.addEventListener('click', () => {
+    video.pause();
+    playBtn.textContent = '▶ 재생';
+    video.currentTime = Math.min(video.duration, video.currentTime + 0.04);
+  });
+
+  video.addEventListener('timeupdate', () => {
+    if (!isSeeking && video.duration) {
+      seekBar.value = (video.currentTime / video.duration) * 100;
+      updateTimeDisplay();
+    }
+  });
+
+  seekBar.addEventListener('input', () => {
+    isSeeking = true;
+    if (video.duration) {
+      video.currentTime = (seekBar.value / 100) * video.duration;
+      updateTimeDisplay();
+    }
+  });
+  seekBar.addEventListener('change', () => { isSeeking = false; });
+
+  function updateTimeDisplay() {
+    const curM = Math.floor(video.currentTime / 60);
+    const curS = Math.floor(video.currentTime % 60);
+    const durM = Math.floor(video.duration / 60) || 0;
+    const durS = Math.floor(video.duration % 60) || 0;
+    timeDisplay.textContent = `${String(curM).padStart(2,'0')}:${String(curS).padStart(2,'0')} / ${String(durM).padStart(2,'0')}:${String(durS).padStart(2,'0')}`;
+  }
+
+  // MediaPipe 세팅
+  let isSeeking = false;
+  let pose = null;
+  try {
+    pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onPoseResults);
+    pose.initialize().catch(() => {});
+  } catch (e) {}
+
+  async function requestProcessingLoop() {
+    if (!video.paused && !video.ended) {
+      await renderCurrentFrame();
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(requestProcessingLoop);
+      } else {
+        requestAnimationFrame(requestProcessingLoop);
+      }
+    }
+  }
+
+  async function renderCurrentFrame() {
+    if (video.readyState >= 2 && pose) {
+      try { await pose.send({ image: video }); } catch (err) { drawScene(null); }
+    } else {
+      drawScene(null);
+    }
+  }
+
+  let lastLandmarks = null;
+
+  function onPoseResults(results) {
+    if (results.poseLandmarks) {
+      lastLandmarks = results.poseLandmarks;
+      analyzeFrameKinematics(results.poseLandmarks);
+    }
+    drawScene(results.poseLandmarks || lastLandmarks);
+  }
+
+  // 프레임별 관절 각도 측정 및 데이터 누적
+  function analyzeFrameKinematics(lm) {
+    const W = canvas.width;
+    const H = canvas.height;
+
+    // 최초 0.3초 구간은 어드레스로 자동 캡처
+    if (video.currentTime < 0.35 && !addressLandmarks) {
+      addressLandmarks = lm;
+    }
+
+    // 1. 척추 각도
+    const midShoulder = { x: (lm.x + lm[12].x) / 2 * W, y: (lm.y + lm[12].y) / 2 * H };
+    const midHip = { x: (lm[23].x + lm[24].x) / 2 * W, y: (lm[23].y + lm[24].y) / 2 * H };
+    const spineAngle = Math.abs(Math.round(Math.atan2(midShoulder.x - midHip.x, -(midShoulder.y - midHip.y)) * (180 / Math.PI)));
+    hudSpine.textContent = `${spineAngle}°`;
+
+    // 2. 어깨 회전각
+    const sDx = (lm[12].x - lm.x) * W;
+    const sDy = (lm[12].y - lm.y) * H;
+    const shoulderTilt = Math.abs(Math.round(Math.atan2(sDy, sDx) * (180 / Math.PI)));
+    hudShoulder.textContent = `${shoulderTilt}°`;
+    if (shoulderTilt > maxShoulderTurn) maxShoulderTurn = shoulderTilt;
+
+    // 3. 왼팔 팔꿈치 각도 (어깨-팔꿈치-손목: 11, 13, 15)
+    const elbowAngle = calculateAngle(lm, lm[13], lm[15]);
+    hudElbow.textContent = `${elbowAngle}°`;
+    if (elbowAngle < minElbowAngle && video.currentTime > 0.5) minElbowAngle = elbowAngle;
+
+    // 4. 머리 변위 측정
+    if (addressLandmarks) {
+      const initHead = { x: addressLandmarks[0].x * W, y: addressLandmarks[0].y * H };
+      const curHead = { x: lm[0].x * W, y: lm[0].y * H };
+      const dev = Math.round(Math.hypot(curHead.x - initHead.x, curHead.y - initHead.y));
+      hudHeadShift.textContent = `${dev} px`;
+      if (dev > maxHeadDev) maxHeadDev = dev;
+
+      // 골반 전진(배치기) 편차
+      const initHipY = (addressLandmarks[23].y + addressLandmarks[24].y) / 2 * H;
+      const curHipY = midHip.y;
+      const hipDev = Math.abs(curHipY - initHipY);
+      if (hipDev > hipShiftMax) hipShiftMax = hipDev;
+    }
+  }
+
+  // 캔버스 렌더링
+  function drawScene(lm) {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (lm) {
+      drawConnectors(ctx, lm, POSE_CONNECTIONS, { color: 'rgba(255, 255, 255, 0.45)', lineWidth: 2 });
+      drawLandmarks(ctx, lm, { color: '#10b981', fillColor: '#34d399', lineWidth: 1, radius: 3 });
+
+      // 척추 주황선
+      const midShoulder = { x: (lm.x + lm[12].x) / 2 * canvas.width, y: (lm.y + lm[12].y) / 2 * canvas.height };
+      const midHip = { x: (lm[23].x + lm[24].x) / 2 * canvas.width, y: (lm[23].y + lm[24].y) / 2 * canvas.height };
+      ctx.beginPath();
+      ctx.moveTo(midShoulder.x, midShoulder.y);
+      ctx.lineTo(midHip.x, midHip.y);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      // 어드레스 머리 기준 원
+      if (addressLandmarks) {
+        ctx.beginPath();
+        ctx.arc(addressLandmarks[0].x * canvas.width, addressLandmarks[0].y * canvas.height, 35, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      }
+    }
+
+    drawBallTracer();
+    ctx.restore();
+  }
+
+  // 3D 볼 궤적
+  function drawBallTracer() {
+    const W = canvas.width;
+    const H = canvas.height;
+    const colors = { straight: '#10b981', draw: '#06b6d4', fade: '#f59e0b', slice: '#ef4444' };
+    const curves = { straight: 0, draw: -0.12, fade: 0.10, slice: 0.28 };
+    const color = colors[currentShotType];
+
+    const startX = W * 0.48;
+    const startY = H * 0.88;
+    const apexX = W * (0.50 + curves[currentShotType] * 0.6);
+    const apexY = H * 0.28;
+    const endX = W * (0.50 + curves[currentShotType]);
+    const endY = H * 0.52;
+
+    const totalSteps = 60;
+    const currentSteps = Math.floor(totalSteps * tracerProgress);
+    if (currentSteps < 2) return;
+
+    function getBezierPoint(t) {
+      const inv = 1 - t;
+      return {
+        x: inv * inv * startX + 2 * inv * t * apexX + t * t * endX,
+        y: inv * inv * startY + 2 * inv * t * apexY + t * t * endY
+      };
+    }
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 15;
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    const p0 = getBezierPoint(0);
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i <= currentSteps; i++) {
+      const pt = getBezierPoint(i / totalSteps);
+      ctx.lineWidth = Math.max(2, 5 * (1 - (i / totalSteps) * 0.6));
+      ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.stroke();
+
+    const headPt = getBezierPoint(currentSteps / totalSteps);
+    ctx.beginPath();
+    ctx.arc(headPt.x, headPt.y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+    ctx.restore();
+  }
+</script>
+
+</body>
+</html>
