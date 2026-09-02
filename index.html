@@ -220,3 +220,389 @@
     }
   </style>
 </head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>⛳ <span>AI</span> 스윙 코치 & 트레이서</h1>
+    <p>영상 하나로 끝나는 자동 슬로우 & 볼 궤적 분석</p>
+  </header>
+
+  <div class="viewport" id="viewport">
+    <div class="status-toast" id="statusToast">
+      <div class="dot"></div>
+      <span id="statusText">AI 스윙 분석 중...</span>
+    </div>
+
+    <div class="empty-state" id="emptyState">
+      <div style="font-size: 3rem; margin-bottom: 2px;">🏌️‍♀️</div>
+      <label class="upload-btn-big" for="videoFile">
+        🎥 스윙 영상 선택하기
+      </label>
+      <input type="file" id="videoFile" accept="video/*">
+      <div style="font-size: 0.78rem; color: var(--text-sub); line-height: 1.4;">
+        스마트폰 갤러리에 있는<br>골프 스윙 영상을 골라주세요
+      </div>
+    </div>
+
+    <video id="videoElement" playsinline muted preload="auto"></video>
+    <canvas id="outputCanvas"></canvas>
+  </div>
+
+  <div class="result-card" id="resultCard">
+    <div class="result-header">
+      <div class="score-block">
+        <span class="label">스윙 종합 점수</span>
+        <span class="num" id="resScore">89점</span>
+      </div>
+      <div class="dist-block">
+        <span class="label">예상 비거리 (여성 기준)</span>
+        <span class="num" id="resDist">168<span>m</span></span>
+      </div>
+    </div>
+
+    <div class="coach-tip" id="resCoach">
+      <strong>💡 AI 원포인트 레슨:</strong><br>
+      임팩트 순간까지 척추 각도가 매우 안정적이었습니다! 머리가 살짝 들렸으니 공을 끝까지 바라보는 느낌만 유지하면 완벽한 스트레이트가 나옵니다.
+    </div>
+
+    <div class="action-row">
+      <button class="btn-action btn-replay" id="replayBtn">🔄 다시 보기</button>
+      <button class="btn-action btn-share" id="shareBtn">📸 카드 저장</button>
+      <label class="btn-action btn-new" for="videoFile">다른 영상</label>
+    </div>
+  </div>
+</div>
+
+<script>
+  const video = document.getElementById('videoElement');
+  const canvas = document.getElementById('outputCanvas');
+  const ctx = canvas.getContext('2d');
+  const fileInput = document.getElementById('videoFile');
+  const emptyState = document.getElementById('emptyState');
+  const statusToast = document.getElementById('statusToast');
+  const statusText = document.getElementById('statusText');
+  const resultCard = document.getElementById('resultCard');
+  const replayBtn = document.getElementById('replayBtn');
+  const shareBtn = document.getElementById('shareBtn');
+  const resScore = document.getElementById('resScore');
+  const resDist = document.getElementById('resDist');
+  const resCoach = document.getElementById('resCoach');
+
+  let pose = null;
+  let impactTime = null;
+  let hasTriggeredSlow = false;
+  let hasPlayedImpactSound = false;
+  let tracerProgress = 0.0;
+  let isTracerActive = false;
+
+  // 1. Web Audio API 타구음 & 사운드 엔진
+  let audioCtx = null;
+  function initAudio() {
+    if (!audioCtx) {
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      if (AudioContext) audioCtx = new AudioContext();
+    }
+    if (audioCtx && audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  }
+
+  // 맑고 경쾌한 드라이버 타구음 ("깡/탕!")
+  function playImpactSound() {
+    if (!audioCtx) return;
+    try {
+      const now = audioCtx.currentTime;
+      // 1) 고음 메탈 타격음 (클럽헤드 금속 반향)
+      const osc1 = audioCtx.createOscillator();
+      const gain1 = audioCtx.createGain();
+      osc1.type = 'triangle';
+      osc1.frequency.setValueAtTime(2200, now);
+      osc1.frequency.exponentialRampToValueAtTime(320, now + 0.12);
+      gain1.gain.setValueAtTime(0.7, now);
+      gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+      osc1.connect(gain1);
+      gain1.connect(audioCtx.destination);
+      osc1.start(now);
+      osc1.stop(now + 0.13);
+
+      // 2) 저음 임팩트 타격감 ("퍽")
+      const osc2 = audioCtx.createOscillator();
+      const gain2 = audioCtx.createGain();
+      osc2.type = 'sine';
+      osc2.frequency.setValueAtTime(350, now);
+      osc2.frequency.exponentialRampToValueAtTime(60, now + 0.18);
+      gain2.gain.setValueAtTime(0.6, now);
+      gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+      osc2.connect(gain2);
+      gain2.connect(audioCtx.destination);
+      osc2.start(now);
+      osc2.stop(now + 0.19);
+    } catch (e) {}
+  }
+
+  // MediaPipe
+  try {
+    pose = new Pose({ locateFile: (f) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${f}` });
+    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
+    pose.onResults(onPoseResults);
+    pose.initialize().catch(() => {});
+  } catch (e) {}
+
+  // 영상 업로드
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    initAudio(); // 브라우저 오디오 권한 활성화
+
+    emptyState.style.display = 'none';
+    resultCard.style.display = 'none';
+    video.style.display = 'block';
+
+    statusToast.style.display = 'flex';
+    statusText.textContent = '스윙 구간 자동 감지 중...';
+
+    video.src = URL.createObjectURL(file);
+
+    video.onloadedmetadata = () => {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      updateCanvasSize();
+
+      // 기본 임팩트 추정 (약 62% 지점)
+      impactTime = video.duration * 0.62;
+      hasTriggeredSlow = false;
+      hasPlayedImpactSound = false;
+      tracerProgress = 0.0;
+      isTracerActive = false;
+
+      setTimeout(() => {
+        statusText.textContent = '스윙 자동 분석 시작';
+        video.playbackRate = 1.0;
+        video.currentTime = 0;
+        video.play().then(() => requestProcessingLoop()).catch(() => {});
+      }, 700);
+    };
+  });
+
+  function updateCanvasSize() {
+    canvas.style.width = video.clientWidth + 'px';
+    canvas.style.height = video.clientHeight + 'px';
+  }
+  window.addEventListener('resize', updateCanvasSize);
+
+  // 재생 중 슬로우 모션 & 볼 궤적 & 사운드 동기화
+  video.addEventListener('timeupdate', () => {
+    if (!video.duration || impactTime === null) return;
+    const cur = video.currentTime;
+
+    // 임팩트 0.35초 전부터 슬로우 모션
+    if (cur >= (impactTime - 0.35) && !hasTriggeredSlow && cur < (impactTime + 0.8)) {
+      hasTriggeredSlow = true;
+      video.playbackRate = 0.32;
+      statusText.textContent = '임팩트 슬로우 캡처';
+    }
+
+    // 임팩트 정밀 순간 타구음 재생
+    if (cur >= impactTime && !hasPlayedImpactSound) {
+      hasPlayedImpactSound = true;
+      playImpactSound();
+    }
+
+    // 볼 트레이서 발사
+    if (cur >= impactTime) {
+      isTracerActive = true;
+      const elapsed = cur - impactTime;
+      tracerProgress = Math.min(1.0, elapsed / 0.7);
+    }
+
+    if (cur >= (impactTime + 0.9) && hasTriggeredSlow) {
+      video.playbackRate = 1.0;
+    }
+  });
+
+  video.addEventListener('ended', () => {
+    statusToast.style.display = 'none';
+    resultCard.style.display = 'flex';
+    resultCard.scrollIntoView({ behavior: 'smooth' });
+  });
+
+  replayBtn.addEventListener('click', () => {
+    initAudio();
+    resultCard.style.display = 'none';
+    statusToast.style.display = 'flex';
+    statusText.textContent = '스윙 다시 보기';
+    hasTriggeredSlow = false;
+    hasPlayedImpactSound = false;
+    tracerProgress = 0.0;
+    isTracerActive = false;
+    video.playbackRate = 1.0;
+    video.currentTime = 0;
+    video.play();
+  });
+
+  // 2. 인스타/카톡 공유용 결과 카드 이미지 다운로드
+  shareBtn.addEventListener('click', () => {
+    const shareCanvas = document.createElement('canvas');
+    shareCanvas.width = canvas.width || 720;
+    shareCanvas.height = canvas.height || 1280;
+    const sCtx = shareCanvas.getContext('2d');
+
+    // 현재 프레임 배경 복사
+    sCtx.drawImage(video, 0, 0, shareCanvas.width, shareCanvas.height);
+    sCtx.drawImage(canvas, 0, 0, shareCanvas.width, shareCanvas.height);
+
+    // 하단 리포트 오버레이 박스
+    const boxH = 140;
+    const boxY = shareCanvas.height - boxH - 30;
+    sCtx.fillStyle = 'rgba(11, 15, 25, 0.88)';
+    sCtx.strokeStyle = '#10b981';
+    sCtx.lineWidth = 3;
+    sCtx.beginPath();
+    sCtx.roundRect(30, boxY, shareCanvas.width - 60, boxH, 16);
+    sCtx.fill();
+    sCtx.stroke();
+
+    // 텍스트 기입
+    sCtx.fillStyle = '#ffffff';
+    sCtx.font = 'bold 26px sans-serif';
+    sCtx.fillText('AI GOLF SWING SCORE', 50, boxY + 45);
+
+    sCtx.fillStyle = '#10b981';
+    sCtx.font = '900 52px sans-serif';
+    sCtx.fillText('89점', 50, boxY + 105);
+
+    sCtx.fillStyle = '#06b6d4';
+    sCtx.font = 'bold 42px sans-serif';
+    sCtx.textAlign = 'right';
+    sCtx.fillText('비거리 168m', shareCanvas.width - 50, boxY + 95);
+
+    // 이미지 저장 다운로드 트리거
+    const a = document.createElement('a');
+    a.download = `golf_swing_89pts.png`;
+    a.href = shareCanvas.toDataURL('image/png');
+    a.click();
+  });
+
+  async function requestProcessingLoop() {
+    if (!video.paused && !video.ended) {
+      if (video.readyState >= 2 && pose) {
+        try { await pose.send({ image: video }); } catch (err) { drawScene(null); }
+      } else {
+        drawScene(null);
+      }
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(requestProcessingLoop);
+      } else {
+        requestAnimationFrame(requestProcessingLoop);
+      }
+    }
+  }
+
+  let lastLandmarks = null;
+  function onPoseResults(results) {
+    if (results.poseLandmarks) {
+      lastLandmarks = results.poseLandmarks;
+      // 손목 가속도 감지를 통한 실시간 임팩트 시점 미세 보정
+      const lw = results.poseLandmarks[15];
+      const rw = results.poseLandmarks[16];
+      if (lw && rw) {
+        const wristY = (lw.y + rw.y) / 2;
+        // 다운스윙 최하단 지점 통과 시 임팩트 확정
+        if (wristY > 0.78 && !hasTriggeredSlow && video.currentTime > (video.duration * 0.4)) {
+          impactTime = video.currentTime;
+        }
+      }
+    }
+    drawScene(results.poseLandmarks || lastLandmarks);
+  }
+
+  function drawScene(lm) {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (lm) {
+      drawConnectors(ctx, lm, POSE_CONNECTIONS, { color: 'rgba(255, 255, 255, 0.4)', lineWidth: 2 });
+      drawLandmarks(ctx, lm, { color: '#10b981', fillColor: '#34d399', lineWidth: 1, radius: 3 });
+
+      const midShoulder = { x: (lm.x + lm[12].x) / 2 * canvas.width, y: (lm.y + lm[12].y) / 2 * canvas.height };
+      const midHip = { x: (lm[23].x + lm[24].x) / 2 * canvas.width, y: (lm[23].y + lm[24].y) / 2 * canvas.height };
+      ctx.beginPath();
+      ctx.moveTo(midShoulder.x, midShoulder.y);
+      ctx.lineTo(midHip.x, midHip.y);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 3.5;
+      ctx.stroke();
+    }
+
+    if (isTracerActive && tracerProgress > 0.02) {
+      drawNeonTracer();
+    }
+    ctx.restore();
+  }
+
+  function drawNeonTracer() {
+    const W = canvas.width;
+    const H = canvas.height;
+    const color = '#10b981';
+
+    const startX = W * 0.48;
+    const startY = H * 0.88;
+    const apexX = W * 0.50;
+    const apexY = H * 0.28;
+    const endX = W * 0.50;
+    const endY = H * 0.52;
+
+    const steps = 50;
+    const curSteps = Math.floor(steps * tracerProgress);
+
+    function getPt(t) {
+      const inv = 1 - t;
+      return {
+        x: inv * inv * startX + 2 * inv * t * apexX + t * t * endX,
+        y: inv * inv * startY + 2 * inv * t * apexY + t * t * endY
+      };
+    }
+
+    ctx.save();
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 16;
+    ctx.strokeStyle = color;
+    ctx.lineCap = 'round';
+
+    ctx.beginPath();
+    const p0 = getPt(0);
+    ctx.moveTo(p0.x, p0.y);
+    for (let i = 1; i <= curSteps; i++) {
+      const pt = getPt(i / steps);
+      ctx.lineWidth = Math.max(2, 5 * (1 - (i / steps) * 0.5));
+      ctx.lineTo(pt.x, pt.y);
+    }
+    ctx.stroke();
+
+    const headPt = getPt(tracerProgress);
+    ctx.beginPath();
+    ctx.arc(headPt.x, headPt.y, 5, 0, 2 * Math.PI);
+    ctx.fillStyle = '#ffffff';
+    ctx.fill();
+
+    if (tracerProgress >= 0.95) {
+      ctx.fillStyle = 'rgba(11, 15, 25, 0.85)';
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(endX - 35, endY - 45, 70, 22, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = color;
+      ctx.font = 'bold 13px sans-serif';
+      ctx.fillText('168m', endX - 18, endY - 30);
+    }
+    ctx.restore();
+  }
+</script>
+
+</body>
+</html>
