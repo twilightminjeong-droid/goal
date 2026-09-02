@@ -3,118 +3,80 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>AI Golf Swing Coach & Tracer</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#0b0f19">
+  <title>AI Golf Coach & Tracer</title>
   <!-- MediaPipe Pose CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
   <style>
     :root {
-      --bg-main: #090d16;
-      --panel-bg: #131b2e;
-      --card-bg: rgba(26, 38, 64, 0.7);
+      --bg: #0b0f19;
+      --card: #151d30;
       --accent: #10b981;
-      --accent-glow: rgba(16, 185, 129, 0.35);
+      --accent-glow: rgba(16, 185, 129, 0.45);
       --cyan: #06b6d4;
       --warning: #f59e0b;
-      --danger: #ef4444;
       --text: #f8fafc;
-      --text-muted: #94a3b8;
+      --text-sub: #94a3b8;
       --border: #1e293b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', 'Segoe UI', Roboto, sans-serif;
-      background: var(--bg-main);
+      font-family: -apple-system, BlinkMacSystemFont, 'Pretendard', sans-serif;
+      background: var(--bg);
       color: var(--text);
-      padding: 10px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
       min-height: 100vh;
     }
-    .app-container {
+    .app {
       width: 100%;
-      max-width: 860px;
+      max-width: 480px;
       display: flex;
       flex-direction: column;
       gap: 12px;
     }
 
-    /* 헤더 및 성별 모드 선택 */
     header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 4px 2px;
+      text-align: center;
+      padding: 4px 0;
     }
-    .brand h1 {
-      font-size: 1.2rem;
+    header h1 {
+      font-size: 1.25rem;
       font-weight: 800;
-      color: #fff;
-      display: flex;
-      align-items: center;
-      gap: 6px;
+      letter-spacing: -0.5px;
     }
-    .brand h1 span { color: var(--accent); }
-    .header-right {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-    .mode-toggle {
-      display: flex;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 20px;
-      padding: 2px;
-    }
-    .mode-btn {
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      font-size: 0.72rem;
-      font-weight: bold;
-      padding: 4px 9px;
-      border-radius: 16px;
-      cursor: pointer;
-    }
-    .mode-btn.active {
-      background: var(--accent);
-      color: #000;
-    }
-    .score-badge {
-      background: linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(6, 182, 212, 0.2));
-      border: 1px solid var(--accent);
-      padding: 4px 10px;
-      border-radius: 16px;
-      text-align: right;
-    }
-    .score-badge .score-val {
-      font-size: 1.1rem;
-      font-weight: 900;
-      color: var(--accent);
+    header h1 span { color: var(--accent); }
+    header p {
+      font-size: 0.75rem;
+      color: var(--text-sub);
+      margin-top: 2px;
     }
 
-    /* 비디오 뷰포트 */
-    .video-viewport {
+    /* 메인 뷰포트 */
+    .viewport {
       position: relative;
       background: #000;
-      border-radius: 14px;
+      border-radius: 16px;
       overflow: hidden;
       border: 1px solid var(--border);
+      aspect-ratio: 9 / 14;
+      max-height: 520px;
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 330px;
-      max-height: 520px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.6);
     }
     video {
       width: 100%;
-      max-height: 520px;
-      display: none;
+      height: 100%;
       object-fit: contain;
+      display: none;
     }
     canvas {
       position: absolute;
@@ -124,696 +86,137 @@
       height: 100%;
       pointer-events: none;
     }
-    .placeholder-box {
-      color: var(--text-muted);
-      font-size: 0.9rem;
-      text-align: center;
-      padding: 40px 15px;
-      line-height: 1.6;
-    }
 
-    /* 구질 & 트레이서 싱크 툴바 */
-    .tracer-bar {
-      background: var(--panel-bg);
-      border-radius: 12px;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
+    /* 초기 화면 */
+    .empty-state {
       display: flex;
-      justify-content: space-between;
+      flex-direction: column;
       align-items: center;
-      flex-wrap: wrap;
-      gap: 8px;
+      gap: 12px;
+      padding: 30px 20px;
+      text-align: center;
     }
-    .tracer-selector {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      flex-wrap: wrap;
-    }
-    .tracer-btn {
-      background: rgba(255, 255, 255, 0.05);
-      border: 1px solid var(--border);
-      color: var(--text-muted);
-      padding: 5px 10px;
-      border-radius: 20px;
-      font-size: 0.73rem;
-      font-weight: 600;
+    .upload-btn-big {
+      background: linear-gradient(135deg, #10b981, #06b6d4);
+      color: #04101e;
+      font-size: 1.05rem;
+      font-weight: 800;
+      padding: 16px 28px;
+      border-radius: 30px;
+      border: none;
       cursor: pointer;
       display: inline-flex;
       align-items: center;
+      gap: 8px;
+      box-shadow: 0 0 25px var(--accent-glow);
+      transition: transform 0.15s;
+    }
+    .upload-btn-big:active { transform: scale(0.96); }
+    input[type="file"] { display: none; }
+
+    /* 분석 중 토스트 */
+    .status-toast {
+      position: absolute;
+      top: 12px;
+      background: rgba(11, 15, 25, 0.85);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 6px 14px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      display: none;
+      align-items: center;
+      gap: 6px;
+      backdrop-filter: blur(8px);
+      z-index: 10;
+    }
+    .status-toast .dot {
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      animation: pulse 1s infinite;
+    }
+    @keyframes pulse {
+      0% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.4); }
+      100% { opacity: 1; transform: scale(1); }
+    }
+
+    /* 결과 리포트 카드 */
+    .result-card {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 18px;
+      display: none;
+      flex-direction: column;
+      gap: 14px;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+      animation: slideUp 0.3s ease-out;
+    }
+    @keyframes slideUp {
+      from { opacity: 0; transform: translateY(15px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .score-block { display: flex; flex-direction: column; }
+    .score-block .label { font-size: 0.72rem; color: var(--text-sub); }
+    .score-block .num { font-size: 2.2rem; font-weight: 900; color: var(--accent); line-height: 1.1; }
+
+    .dist-block { text-align: right; }
+    .dist-block .label { font-size: 0.72rem; color: var(--text-sub); }
+    .dist-block .num { font-size: 1.7rem; font-weight: 800; color: var(--cyan); line-height: 1.1; }
+    .dist-block .num span { font-size: 0.85rem; font-weight: 400; color: var(--text-sub); margin-left: 2px; }
+
+    .coach-tip {
+      background: rgba(16, 185, 129, 0.08);
+      border-left: 4px solid var(--accent);
+      padding: 12px 14px;
+      border-radius: 8px;
+      font-size: 0.84rem;
+      line-height: 1.5;
+    }
+    .coach-tip strong { color: var(--accent); }
+
+    .action-row {
+      display: flex;
+      gap: 8px;
+    }
+    .btn-action {
+      flex: 1;
+      padding: 12px 8px;
+      border-radius: 10px;
+      cursor: pointer;
+      font-size: 0.82rem;
+      font-weight: 700;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       gap: 4px;
     }
-    .tracer-btn .dot { width: 7px; height: 7px; border-radius: 50%; }
-    .tracer-btn[data-shot="straight"].active { background: rgba(16, 185, 129, 0.15); border-color: #10b981; color: #fff; }
-    .tracer-btn[data-shot="draw"].active { background: rgba(6, 182, 212, 0.15); border-color: #06b6d4; color: #fff; }
-    .tracer-btn[data-shot="fade"].active { background: rgba(245, 158, 11, 0.15); border-color: #f59e0b; color: #fff; }
-    .tracer-btn[data-shot="slice"].active { background: rgba(239, 68, 68, 0.15); border-color: #ef4444; color: #fff; }
-
-    .sync-actions { display: flex; gap: 6px; }
-    .btn-sync {
+    .btn-replay {
+      background: rgba(255, 255, 255, 0.08);
+      border: 1px solid var(--border);
+      color: #fff;
+    }
+    .btn-share {
       background: rgba(6, 182, 212, 0.15);
       border: 1px solid var(--cyan);
       color: var(--cyan);
-      padding: 6px 11px;
-      border-radius: 8px;
-      font-size: 0.74rem;
-      font-weight: bold;
-      cursor: pointer;
     }
-    .launch-btn {
-      background: linear-gradient(135deg, #10b981, #06b6d4);
-      color: #000;
+    .btn-new {
+      background: var(--accent);
+      border: none;
+      color: #04101e;
       font-weight: 800;
-      padding: 6px 12px;
-      border-radius: 8px;
-      border: none;
-      font-size: 0.74rem;
-      cursor: pointer;
-    }
-
-    /* 9단계 타임라인 */
-    .timeline-section { display: flex; flex-direction: column; gap: 6px; }
-    .section-title { font-size: 0.75rem; font-weight: 700; color: var(--text-muted); display: flex; justify-content: space-between; }
-    .phase-strip { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px 2px; scrollbar-width: thin; }
-    .phase-chip {
-      flex: 0 0 auto;
-      background: var(--panel-bg);
-      border: 1px solid var(--border);
-      border-radius: 9px;
-      padding: 6px 10px;
-      font-size: 0.74rem;
-      color: var(--text-muted);
-      cursor: pointer;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 2px;
-      min-width: 72px;
-    }
-    .phase-chip .p-num { font-size: 0.6rem; color: #64748b; font-weight: bold; }
-    .phase-chip .p-name { font-weight: 600; color: #cbd5e1; }
-    .phase-chip.active { background: rgba(16, 185, 129, 0.15); border-color: var(--accent); }
-    .phase-chip.active .p-name { color: #fff; }
-
-    /* 재생 컨트롤 바 */
-    .playback-card {
-      background: var(--panel-bg);
-      border-radius: 12px;
-      padding: 9px 12px;
-      border: 1px solid var(--border);
-      display: flex;
-      flex-direction: column;
-      gap: 8px;
-    }
-    .file-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-    input[type="file"] { display: none; }
-    .btn {
-      background: rgba(255, 255, 255, 0.06);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 6px 11px;
-      border-radius: 8px;
-      font-size: 0.76rem;
-      cursor: pointer;
-      font-weight: 600;
-    }
-    .btn-accent { background: var(--accent); border-color: var(--accent); color: #000; }
-    .slider-row { display: flex; align-items: center; gap: 10px; }
-    .slider-row input[type="range"] { flex: 1; accent-color: var(--accent); height: 5px; cursor: pointer; }
-    .time-lbl { font-size: 0.72rem; color: var(--text-muted); font-variant-numeric: tabular-nums; }
-
-    /* 9대 샷 탄도 데이터 그리드 */
-    .metrics-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
-    .metric-card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      padding: 8px 6px;
-      border-radius: 9px;
-      text-align: center;
-    }
-    .metric-card .m-title { font-size: 0.65rem; color: var(--text-muted); margin-bottom: 2px; }
-    .metric-card .m-val { font-size: 1.15rem; font-weight: 800; color: #fff; }
-    .metric-card .m-val span { font-size: 0.68rem; font-weight: 400; color: var(--text-muted); margin-left: 2px; }
-    .metric-card.highlight .m-val { color: var(--cyan); }
-    .metric-card.accent .m-val { color: var(--accent); }
-
-    /* 대시보드 탭 */
-    .dashboard-tabs { display: flex; border-bottom: 1px solid var(--border); margin-top: 2px; }
-    .tab-btn {
-      padding: 8px 12px;
-      font-size: 0.78rem;
-      font-weight: 700;
-      color: var(--text-muted);
-      background: none;
-      border: none;
-      cursor: pointer;
-      border-bottom: 2px solid transparent;
-    }
-    .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
-
-    .body-scores { display: flex; flex-direction: column; gap: 8px; background: var(--panel-bg); padding: 12px; border-radius: 10px; }
-    .body-score-item { display: flex; align-items: center; gap: 10px; font-size: 0.76rem; }
-    .bar-wrapper { flex: 1; height: 7px; background: #1e293b; border-radius: 4px; overflow: hidden; }
-    .bar-fill { height: 100%; background: linear-gradient(90deg, var(--cyan), var(--accent)); transition: width 0.3s; }
-    .ai-feedback-box {
-      background: rgba(16, 185, 129, 0.08);
-      border-left: 4px solid var(--accent);
-      padding: 11px;
-      border-radius: 8px;
-      font-size: 0.78rem;
-      line-height: 1.5;
     }
   </style>
 </head>
-<body>
-
-<div class="app-container">
-  <header>
-    <div class="brand">
-      <h1>⛳ <span>AI</span> GOLF TRACER</h1>
-    </div>
-    <div class="header-right">
-      <!-- 여성 / 남성 모드 토글 (기본값: 여성) -->
-      <div class="mode-toggle">
-        <button class="mode-btn active" id="modeFemale">👩 여성</button>
-        <button class="mode-btn" id="modeMale">👨 남성</button>
-      </div>
-      <div class="score-badge">
-        <div class="score-val" id="totalScoreBadge">91점</div>
-      </div>
-    </div>
-  </header>
-
-  <!-- 비디오 & 트레이서 뷰포트 -->
-  <div class="video-viewport" id="videoWrapper">
-    <div id="placeholder" class="placeholder-box">
-      아래 <strong>[📁 스윙 영상 선택]</strong>을 눌러<br>갤러리의 스윙 영상을 불러와 주세요.
-    </div>
-    <video id="videoElement" playsinline muted preload="auto"></video>
-    <canvas id="outputCanvas"></canvas>
-  </div>
-
-  <!-- 구질 & 트레이서 싱크 툴바 -->
-  <div class="tracer-bar">
-    <div class="tracer-selector">
-      <button class="tracer-btn active" data-shot="straight"><span class="dot" style="background: #10b981;"></span> 스트레이트</button>
-      <button class="tracer-btn" data-shot="draw"><span class="dot" style="background: #06b6d4;"></span> 드로우</button>
-      <button class="tracer-btn" data-shot="fade"><span class="dot" style="background: #f59e0b;"></span> 페이드</button>
-      <button class="tracer-btn" data-shot="slice"><span class="dot" style="background: #ef4444;"></span> 슬라이스</button>
-    </div>
-    <div class="sync-actions">
-      <!-- 영상과 볼 궤적 1:1 싱크 맞추는 버튼 -->
-      <button class="btn-sync" id="setImpactSyncBtn">🎯 임팩트 시점 설정</button>
-      <button class="launch-btn" id="launchTracerBtn">🚀 트레이서</button>
-    </div>
-  </div>
-
-  <!-- 9단계 타임라인 썸네일 스트립 -->
-  <div class="timeline-section">
-    <div class="section-title">
-      <span>9-Phase Swing Stages</span>
-      <span id="currentPhaseLabel" style="color: var(--accent);">현재: 임팩트</span>
-    </div>
-    <div class="phase-strip" id="phaseStrip">
-      <div class="phase-chip" data-phase="0"><span class="p-num">01</span><span class="p-name">어드레스</span></div>
-      <div class="phase-chip" data-phase="1"><span class="p-num">02</span><span class="p-name">테이크어웨이</span></div>
-      <div class="phase-chip" data-phase="2"><span class="p-num">03</span><span class="p-name">백스윙</span></div>
-      <div class="phase-chip" data-phase="3"><span class="p-num">04</span><span class="p-name">탑스윙</span></div>
-      <div class="phase-chip" data-phase="4"><span class="p-num">05</span><span class="p-name">전환</span></div>
-      <div class="phase-chip" data-phase="5"><span class="p-num">06</span><span class="p-name">다운스윙</span></div>
-      <div class="phase-chip active" data-phase="6"><span class="p-num">07</span><span class="p-name">임팩트</span></div>
-      <div class="phase-chip" data-phase="7"><span class="p-num">08</span><span class="p-name">팔로스루</span></div>
-      <div class="phase-chip" data-phase="8"><span class="p-num">09</span><span class="p-name">피니시</span></div>
-    </div>
-  </div>
-
-  <!-- 비디오 조작 패널 -->
-  <div class="playback-card">
-    <div class="file-actions">
-      <label class="btn btn-accent" for="videoFile">📁 스윙 영상 선택</label>
-      <input type="file" id="videoFile" accept="video/*">
-      <button class="btn" id="playBtn" disabled>▶ 재생</button>
-      <button class="btn" id="prevFrameBtn" disabled>◀ 1프레임</button>
-      <button class="btn" id="nextFrameBtn" disabled>1프레임 ▶</button>
-      <button class="btn" id="calcScoreBtn">⚡ AI 채점</button>
-    </div>
-
-    <div class="slider-row">
-      <input type="range" id="seekBar" min="0" max="100" value="0" step="0.1" disabled>
-      <span class="time-lbl" id="timeDisplay">00:00 / 00:00</span>
-    </div>
-
-    <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.72rem; color: #38bdf8;">
-      <span id="statusMsg">영상을 선택해 주세요.</span>
-      <div style="display: flex; gap: 4px;">
-        <button class="btn speed-btn" data-speed="0.25">0.25x</button>
-        <button class="btn speed-btn" data-speed="0.5">0.5x</button>
-        <button class="btn speed-btn" data-speed="1.0" style="border-color: var(--accent);">1.0x</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- 대시보드 탭 -->
-  <div class="dashboard-tabs">
-    <button class="tab-btn active" id="tabMetricsBtn">9대 탄도 데이터</button>
-    <button class="tab-btn" id="tabScoreBtn">5대 부위 진단 (100점)</button>
-    <button class="tab-btn" id="tabCoachBtn">AI 코칭 리포트</button>
-  </div>
-
-  <!-- 9대 샷 탄도 데이터 그리드 -->
-  <div class="metrics-grid" id="metricsContent">
-    <div class="metric-card accent"><div class="m-title">비거리 (Total)</div><div class="m-val" id="valDist">165<span>m</span></div></div>
-    <div class="metric-card"><div class="m-title">캐리 (Carry)</div><div class="m-val" id="valCarry">150<span>m</span></div></div>
-    <div class="metric-card highlight"><div class="m-title">볼 스피드</div><div class="m-val" id="valBallSpd">47.2<span>m/s</span></div></div>
-    <div class="metric-card"><div class="m-title">헤드 스피드</div><div class="m-val" id="valHeadSpd">33.2<span>m/s</span></div></div>
-    <div class="metric-card"><div class="m-title">발사각 (Launch)</div><div class="m-val" id="valAngle">15.5<span>°</span></div></div>
-    <div class="metric-card"><div class="m-title">발사 방향</div><div class="m-val" id="valDir">R 0.5<span>°</span></div></div>
-    <div class="metric-card"><div class="m-title">백스핀 (Spin)</div><div class="m-val" id="valBackspin">2,600<span>rpm</span></div></div>
-    <div class="metric-card"><div class="m-title">사이드 스핀</div><div class="m-val" id="valSidespin">R 30<span>rpm</span></div></div>
-    <div class="metric-card highlight"><div class="m-title">정타율 (Smash)</div><div class="m-val" id="valSmash">1.42</div></div>
-  </div>
-
-  <!-- 5대 부위 점수판 -->
-  <div class="body-scores" id="scoresContent" style="display: none;">
-    <div class="body-score-item"><span style="width: 85px; color: #cbd5e1; font-weight: 600;">머리 고정</span><div class="bar-wrapper"><div class="bar-fill" id="barHead" style="width: 90%;"></div></div><span id="txtHead" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">18/20</span></div>
-    <div class="body-score-item"><span style="width: 85px; color: #cbd5e1; font-weight: 600;">어깨 회전</span><div class="bar-wrapper"><div class="bar-fill" id="barShoulder" style="width: 95%;"></div></div><span id="txtShoulder" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">19/20</span></div>
-    <div class="body-score-item"><span style="width: 85px; color: #cbd5e1; font-weight: 600;">팔꿈치 각도</span><div class="bar-wrapper"><div class="bar-fill" id="barElbow" style="width: 90%;"></div></div><span id="txtElbow" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">18/20</span></div>
-    <div class="body-score-item"><span style="width: 85px; color: #cbd5e1; font-weight: 600;">골반 유지</span><div class="bar-wrapper"><div class="bar-fill" id="barHip" style="width: 85%;"></div></div><span id="txtHip" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">17/20</span></div>
-    <div class="body-score-item"><span style="width: 85px; color: #cbd5e1; font-weight: 600;">체중 이동</span><div class="bar-wrapper"><div class="bar-fill" id="barWeight" style="width: 95%;"></div></div><span id="txtWeight" style="width: 45px; text-align: right; color: var(--accent); font-weight: 700;">19/20</span></div>
-  </div>
-
-  <!-- AI 코칭 리포트 -->
-  <div class="ai-feedback-box" id="coachContent" style="display: none;">
-    <div id="aiCoachText">
-      <strong>💡 여성 골퍼 맞춤 분석:</strong><br>
-      이상적인 발사각(15.5°)과 백스핀으로 비거리를 최대화했습니다. 임팩트 시 상체가 들리지 않고 안정적인 척추각을 유지했습니다.
-    </div>
-  </div>
-</div>
-
-<script>
-  const video = document.getElementById('videoElement');
-  const canvas = document.getElementById('outputCanvas');
-  const ctx = canvas.getContext('2d');
-  const fileInput = document.getElementById('videoFile');
-  const playBtn = document.getElementById('playBtn');
-  const seekBar = document.getElementById('seekBar');
-  const timeDisplay = document.getElementById('timeDisplay');
-  const prevFrameBtn = document.getElementById('prevFrameBtn');
-  const nextFrameBtn = document.getElementById('nextFrameBtn');
-  const placeholder = document.getElementById('placeholder');
-  const speedBtns = document.querySelectorAll('.speed-btn');
-  const statusMsg = document.getElementById('statusMsg');
-  const phaseChips = document.querySelectorAll('.phase-chip');
-  const currentPhaseLabel = document.getElementById('currentPhaseLabel');
-  const launchTracerBtn = document.getElementById('launchTracerBtn');
-  const setImpactSyncBtn = document.getElementById('setImpactSyncBtn');
-  const tracerBtns = document.querySelectorAll('.tracer-btn');
-  const calcScoreBtn = document.getElementById('calcScoreBtn');
-
-  // 성별 모드 토글
-  let currentGender = 'female'; // 기본값: 여성
-  const modeFemale = document.getElementById('modeFemale');
-  const modeMale = document.getElementById('modeMale');
-
-  modeFemale.onclick = () => {
-    currentGender = 'female';
-    modeFemale.classList.add('active');
-    modeMale.classList.remove('active');
-    applyShotPreset(currentShotType);
-  };
-  modeMale.onclick = () => {
-    currentGender = 'male';
-    modeMale.classList.add('active');
-    modeFemale.classList.remove('active');
-    applyShotPreset(currentShotType);
-  };
-
-  // 여성 / 남성 현실 수치 프리셋 데이터베이스
-  const GENDER_PRESETS = {
-    female: {
-      straight: {
-        dist: '165', carry: '150', ballSpd: '47.2', headSpd: '33.2', angle: '15.5', dir: 'R 0.5', backspin: '2,600', sidespin: 'R 30', smash: '1.42',
-        coach: '<strong>💡 여성 드라이버 스트레이트 샷:</strong><br>적정 탄도(15.5°)와 백스핀으로 캐리와 런이 조화를 이루어 165m의 안정적인 거리를 형성했습니다.'
-      },
-      draw: {
-        dist: '175', carry: '158', ballSpd: '49.0', headSpd: '34.0', angle: '14.2', dir: 'R 2.2', backspin: '2,350', sidespin: 'L 280', smash: '1.44',
-        coach: '<strong>💡 여성 드라이버 드로우 샷:</strong><br>인-아웃 궤적으로 볼에 완벽한 드로우 회전이 실려 175m 최고 비거리를 달성했습니다.'
-      },
-      fade: {
-        dist: '155', carry: '144', ballSpd: '45.0', headSpd: '32.5', angle: '16.8', dir: 'L 1.8', backspin: '2,900', sidespin: 'R 250', smash: '1.38',
-        coach: '<strong>💡 여성 드라이버 페이드 샷:</strong><br>안정적인 랜딩각으로 페어웨이에 안착했습니다. 런이 적어 좁은 홀 공략에 적합합니다.'
-      },
-      slice: {
-        dist: '130', carry: '120', ballSpd: '40.2', headSpd: '31.0', angle: '19.5', dir: 'R 5.8', backspin: '3,650', sidespin: 'R 650', smash: '1.30',
-        coach: '<strong>⚠️ 여성 드라이버 슬라이스:</strong><br>임팩트 시 페이스가 열려 백스핀이 3,600rpm까지 상승하며 30m 이상 거리 손실이 발생했습니다.'
-      }
-    },
-    male: {
-      straight: {
-        dist: '230', carry: '212', ballSpd: '63.0', headSpd: '43.5', angle: '13.5', dir: 'R 0.5', backspin: '2,400', sidespin: 'R 40', smash: '1.45',
-        coach: '<strong>💡 남성 드라이버 스트레이트:</strong> 정타율 1.45의 우수한 비거리입니다.'
-      },
-      draw: {
-        dist: '242', carry: '222', ballSpd: '65.1', headSpd: '44.2', angle: '12.5', dir: 'R 2.8', backspin: '2,150', sidespin: 'L 320', smash: '1.47',
-        coach: '<strong>💡 남성 드라이버 드로우:</strong> 최적의 인-아웃 궤적입니다.'
-      },
-      fade: {
-        dist: '220', carry: '208', ballSpd: '61.5', headSpd: '43.0', angle: '14.8', dir: 'L 2.0', backspin: '2,700', sidespin: 'R 260', smash: '1.43',
-        coach: '<strong>💡 남성 드라이버 페이드:</strong> 안정적인 컨트롤 샷입니다.'
-      },
-      slice: {
-        dist: '185', carry: '172', ballSpd: '56.0', headSpd: '42.0', angle: '17.5', dir: 'R 6.2', backspin: '3,450', sidespin: 'R 720', smash: '1.33',
-        coach: '<strong>⚠️ 남성 드라이버 슬라이스:</strong> 엎어치기로 인한 감속입니다.'
-      }
-    }
-  };
-
-  let currentShotType = 'straight';
-  let impactTime = null; // 비디오 속 임팩트 발생 초(sec)
-  const BALL_FLIGHT_DURATION = 0.8; // 실제 볼이 날아가는 영상 시간(약 0.8초)
-
-  function applyShotPreset(type) {
-    const data = GENDER_PRESETS[currentGender][type];
-    document.getElementById('valDist').innerHTML = `${data.dist}<span>m</span>`;
-    document.getElementById('valCarry').innerHTML = `${data.carry}<span>m</span>`;
-    document.getElementById('valBallSpd').innerHTML = `${data.ballSpd}<span>m/s</span>`;
-    document.getElementById('valHeadSpd').innerHTML = `${data.headSpd}<span>m/s</span>`;
-    document.getElementById('valAngle').innerHTML = `${data.angle}<span>°</span>`;
-    document.getElementById('valDir').innerHTML = `${data.dir}<span>°</span>`;
-    document.getElementById('valBackspin').innerHTML = `${data.backspin}<span>rpm</span>`;
-    document.getElementById('valSidespin').innerHTML = `${data.sidespin}<span>rpm</span>`;
-    document.getElementById('valSmash').textContent = data.smash;
-    document.getElementById('aiCoachText').innerHTML = data.coach;
-  }
-
-  // 구질 버튼
-  tracerBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      tracerBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      currentShotType = btn.dataset.shot;
-      applyShotPreset(currentShotType);
-      renderCurrentFrame();
-    });
-  });
-
-  // 임팩트 시점 싱크 설정 버튼
-  setImpactSyncBtn.addEventListener('click', () => {
-    impactTime = video.currentTime;
-    statusMsg.textContent = `🎯 임팩트 시점 동기화 완료 (${impactTime.toFixed(2)}초)`;
-    statusMsg.style.color = '#10b981';
-    renderCurrentFrame();
-  });
-
-  // 트레이서 발사 버튼
-  launchTracerBtn.addEventListener('click', () => {
-    impactTime = video.currentTime;
-    renderCurrentFrame();
-  });
-
-  // 9단계 페이즈 선택 시 07 임팩트 클릭 시 자동 임팩트 마킹
-  phaseChips.forEach(chip => {
-    chip.addEventListener('click', () => {
-      phaseChips.forEach(c => c.classList.remove('active'));
-      chip.classList.add('active');
-      const idx = parseInt(chip.dataset.phase);
-      currentPhaseLabel.textContent = `현재: ${chip.querySelector('.p-name').textContent}`;
-
-      if (video.duration) {
-        video.currentTime = (idx / 8) * video.duration;
-        if (idx === 6) { // 07 임팩트
-          impactTime = video.currentTime;
-        }
-      }
-    });
-  });
-
-  // 비디오 로더
-  fileInput.addEventListener('change', (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-
-    statusMsg.textContent = `⏳ 로딩 중: ${file.name}`;
-    video.src = URL.createObjectURL(file);
-    video.style.display = 'block';
-    placeholder.style.display = 'none';
-
-    video.onloadedmetadata = () => {
-      statusMsg.textContent = `✅ 영상 준비 완료 (${video.videoWidth}x${video.videoHeight})`;
-      playBtn.disabled = false;
-      seekBar.disabled = false;
-      prevFrameBtn.disabled = false;
-      nextFrameBtn.disabled = false;
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      updateCanvasSize();
-
-      // 대략 65% 지점을 기본 임팩트 시점으로 자동 추정 세팅
-      impactTime = video.duration * 0.65;
-      video.currentTime = 0.05;
-      applyShotPreset('straight');
-    };
-  });
-
-  function updateCanvasSize() {
-    canvas.style.width = video.clientWidth + 'px';
-    canvas.style.height = video.clientHeight + 'px';
-  }
-  window.addEventListener('resize', updateCanvasSize);
-
-  video.addEventListener('seeked', () => renderCurrentFrame());
-
-  playBtn.addEventListener('click', () => {
-    if (video.paused) {
-      video.play().then(() => {
-        playBtn.textContent = '⏸ 일시정지';
-        requestProcessingLoop();
-      });
-    } else {
-      video.pause();
-      playBtn.textContent = '▶ 재생';
-    }
-  });
-
-  speedBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      speedBtns.forEach(b => b.style.borderColor = 'var(--border)');
-      btn.style.borderColor = 'var(--accent)';
-      video.playbackRate = parseFloat(btn.dataset.speed);
-    });
-  });
-
-  prevFrameBtn.addEventListener('click', () => {
-    video.pause();
-    playBtn.textContent = '▶ 재생';
-    video.currentTime = Math.max(0, video.currentTime - 0.04);
-  });
-
-  nextFrameBtn.addEventListener('click', () => {
-    video.pause();
-    playBtn.textContent = '▶ 재생';
-    video.currentTime = Math.min(video.duration, video.currentTime + 0.04);
-  });
-
-  video.addEventListener('timeupdate', () => {
-    if (!isSeeking && video.duration) {
-      seekBar.value = (video.currentTime / video.duration) * 100;
-      updateTimeDisplay();
-    }
-  });
-
-  seekBar.addEventListener('input', () => {
-    isSeeking = true;
-    if (video.duration) {
-      video.currentTime = (seekBar.value / 100) * video.duration;
-      updateTimeDisplay();
-    }
-  });
-  seekBar.addEventListener('change', () => { isSeeking = false; });
-
-  function updateTimeDisplay() {
-    const curM = Math.floor(video.currentTime / 60);
-    const curS = Math.floor(video.currentTime % 60);
-    const durM = Math.floor(video.duration / 60) || 0;
-    const durS = Math.floor(video.duration % 60) || 0;
-    timeDisplay.textContent = `${String(curM).padStart(2,'0')}:${String(curS).padStart(2,'0')} / ${String(durM).padStart(2,'0')}:${String(durS).padStart(2,'0')}`;
-  }
-
-  // MediaPipe
-  let isSeeking = false;
-  let pose = null;
-  try {
-    pose = new Pose({ locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}` });
-    pose.setOptions({ modelComplexity: 1, smoothLandmarks: true, minDetectionConfidence: 0.5, minTrackingConfidence: 0.5 });
-    pose.onResults(onPoseResults);
-    pose.initialize().catch(() => {});
-  } catch (e) {}
-
-  async function requestProcessingLoop() {
-    if (!video.paused && !video.ended) {
-      await renderCurrentFrame();
-      if ('requestVideoFrameCallback' in video) {
-        video.requestVideoFrameCallback(requestProcessingLoop);
-      } else {
-        requestAnimationFrame(requestProcessingLoop);
-      }
-    }
-  }
-
-  async function renderCurrentFrame() {
-    if (video.readyState >= 2 && pose) {
-      try { await pose.send({ image: video }); } catch (err) { drawScene(null); }
-    } else {
-      drawScene(null);
-    }
-  }
-
-  let lastLandmarks = null;
-  function onPoseResults(results) {
-    if (results.poseLandmarks) lastLandmarks = results.poseLandmarks;
-    drawScene(results.poseLandmarks || lastLandmarks);
-  }
-
-  // 캔버스 렌더링
-  function drawScene(lm) {
-    ctx.save();
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    // 관절 스켈레톤
-    if (lm) {
-      drawConnectors(ctx, lm, POSE_CONNECTIONS, { color: 'rgba(255, 255, 255, 0.45)', lineWidth: 2 });
-      drawLandmarks(ctx, lm, { color: '#10b981', fillColor: '#34d399', lineWidth: 1, radius: 3 });
-
-      const midShoulder = { x: (lm.x + lm[12].x) / 2 * canvas.width, y: (lm.y + lm[12].y) / 2 * canvas.height };
-      const midHip = { x: (lm[23].x + lm[24].x) / 2 * canvas.width, y: (lm[23].y + lm[24].y) / 2 * canvas.height };
-      ctx.beginPath();
-      ctx.moveTo(midShoulder.x, midShoulder.y);
-      ctx.lineTo(midHip.x, midHip.y);
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 4;
-      ctx.stroke();
-    }
-
-    // 영상 재생 위치와 1:1 동기화된 볼 트레이서
-    drawSyncedBallTracer();
-
-    ctx.restore();
-  }
-
-  // 비디오 시간 완벽 동기화 볼 트레이서
-  function drawSyncedBallTracer() {
-    if (impactTime === null || !video.duration) return;
-
-    const curTime = video.currentTime;
-    // 임팩트 전이면 아직 공이 맞지 않았으므로 트레이서 미표시
-    if (curTime < impactTime) return;
-
-    // 임팩트 이후 경과 시간에 따라 0.0 ~ 1.0 진행률 산출
-    const elapsedSinceImpact = curTime - impactTime;
-    const progress = Math.min(1.0, elapsedSinceImpact / BALL_FLIGHT_DURATION);
-    if (progress <= 0.02) return;
-
-    const W = canvas.width;
-    const H = canvas.height;
-    const colors = { straight: '#10b981', draw: '#06b6d4', fade: '#f59e0b', slice: '#ef4444' };
-    const curves = { straight: 0, draw: -0.12, fade: 0.10, slice: 0.28 };
-    const color = colors[currentShotType];
-
-    const startX = W * 0.48;
-    const startY = H * 0.88;
-    const apexX = W * (0.50 + curves[currentShotType] * 0.6);
-    const apexY = H * 0.28;
-    const endX = W * (0.50 + curves[currentShotType]);
-    const endY = H * 0.52;
-
-    const totalSteps = 60;
-    const currentSteps = Math.floor(totalSteps * progress);
-
-    function getBezierPoint(t) {
-      const inv = 1 - t;
-      return {
-        x: inv * inv * startX + 2 * inv * t * apexX + t * t * endX,
-        y: inv * inv * startY + 2 * inv * t * apexY + t * t * endY
-      };
-    }
-
-    ctx.save();
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 15;
-    ctx.strokeStyle = color;
-    ctx.lineCap = 'round';
-
-    ctx.beginPath();
-    const p0 = getBezierPoint(0);
-    ctx.moveTo(p0.x, p0.y);
-    for (let i = 1; i <= currentSteps; i++) {
-      const pt = getBezierPoint(i / totalSteps);
-      ctx.lineWidth = Math.max(2, 5 * (1 - (i / totalSteps) * 0.6));
-      ctx.lineTo(pt.x, pt.y);
-    }
-    ctx.stroke();
-
-    // 헤드 볼
-    const headPt = getBezierPoint(progress);
-    ctx.beginPath();
-    ctx.arc(headPt.x, headPt.y, Math.max(3, 6 * (1 - progress * 0.4)), 0, 2 * Math.PI);
-    ctx.fillStyle = '#ffffff';
-    ctx.fill();
-
-    // 착탄 시 핀과 비거리 표시
-    if (progress >= 0.95) {
-      const curData = GENDER_PRESETS[currentGender][currentShotType];
-      const badgeText = `${curData.dist}m`;
-      ctx.font = 'bold 12px sans-serif';
-      const textW = ctx.measureText(badgeText).width;
-
-      ctx.fillStyle = 'rgba(9, 13, 22, 0.85)';
-      ctx.strokeStyle = color;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.roundRect(endX - textW/2 - 6, endY - 45, textW + 12, 20, 4);
-      ctx.fill();
-      ctx.stroke();
-
-      ctx.fillStyle = color;
-      ctx.fillText(badgeText, endX - textW/2, endY - 31);
-    }
-
-    ctx.restore();
-  }
-
-  // 탭 전환
-  const tabScoreBtn = document.getElementById('tabScoreBtn');
-  const tabMetricsBtn = document.getElementById('tabMetricsBtn');
-  const tabCoachBtn = document.getElementById('tabCoachBtn');
-  const scoresContent = document.getElementById('scoresContent');
-  const metricsContent = document.getElementById('metricsContent');
-  const coachContent = document.getElementById('coachContent');
-
-  tabScoreBtn.onclick = () => {
-    [tabScoreBtn, tabMetricsBtn, tabCoachBtn].forEach(b => b.classList.remove('active'));
-    tabScoreBtn.classList.add('active');
-    scoresContent.style.display = 'flex';
-    metricsContent.style.display = 'none';
-    coachContent.style.display = 'none';
-  };
-  tabMetricsBtn.onclick = () => {
-    [tabScoreBtn, tabMetricsBtn, tabCoachBtn].forEach(b => b.classList.remove('active'));
-    tabMetricsBtn.classList.add('active');
-    scoresContent.style.display = 'none';
-    metricsContent.style.display = 'grid';
-    coachContent.style.display = 'none';
-  };
-  tabCoachBtn.onclick = () => {
-    [tabScoreBtn, tabMetricsBtn, tabCoachBtn].forEach(b => b.classList.remove('active'));
-    tabCoachBtn.classList.add('active');
-    scoresContent.style.display = 'none';
-    metricsContent.style.display = 'none';
-    coachContent.style.display = 'block';
-  };
-</script>
-
-</body>
-</html>
