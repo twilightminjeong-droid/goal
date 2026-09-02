@@ -2,8 +2,8 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 골프 스윙 분석기 (Golf Swing Analyzer PoC)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>AI 골프 스윙 분석기</title>
   <!-- MediaPipe Pose CDN -->
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
   <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
@@ -23,7 +23,7 @@
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: var(--bg-color);
       color: var(--text);
-      padding: 16px;
+      padding: 12px;
       display: flex;
       flex-direction: column;
       align-items: center;
@@ -31,39 +31,32 @@
     }
     .container {
       width: 100%;
-      max-width: 900px;
+      max-width: 800px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 12px;
     }
-    header {
-      text-align: center;
-      padding: 8px 0;
-    }
-    header h1 { font-size: 1.5rem; margin-bottom: 4px; color: var(--accent); }
-    header p { font-size: 0.875rem; color: var(--text-muted); }
+    header { text-align: center; padding: 4px 0; }
+    header h1 { font-size: 1.35rem; color: var(--accent); margin-bottom: 2px; }
+    header p { font-size: 0.8rem; color: var(--text-muted); }
 
     .video-container {
       position: relative;
       background: #000;
       border-radius: 12px;
       overflow: hidden;
-      border: 2px dashed var(--border);
+      border: 1px solid var(--border);
       display: flex;
       justify-content: center;
       align-items: center;
-      min-height: 360px;
-      max-height: 560px;
-      transition: border-color 0.2s;
-    }
-    .video-container.drag-over {
-      border-color: var(--accent);
-      background: rgba(16, 185, 129, 0.05);
+      min-height: 320px;
+      max-height: 520px;
     }
     video {
-      max-width: 100%;
-      max-height: 560px;
-      display: block;
+      width: 100%;
+      max-height: 520px;
+      display: none;
+      object-fit: contain;
     }
     canvas {
       position: absolute;
@@ -75,105 +68,103 @@
     }
     .placeholder-text {
       color: var(--text-muted);
-      font-size: 0.95rem;
+      font-size: 0.9rem;
       text-align: center;
-      padding: 40px;
+      padding: 30px 15px;
       line-height: 1.6;
     }
 
     .control-panel {
       background: var(--panel-bg);
       border-radius: 12px;
-      padding: 16px;
+      padding: 14px;
       border: 1px solid var(--border);
       display: flex;
       flex-direction: column;
-      gap: 12px;
+      gap: 10px;
     }
     .file-input-wrapper {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      flex-wrap: wrap;
-    }
-    input[type="file"] {
-      display: none;
-    }
-    .btn {
-      background: var(--panel-bg);
-      color: var(--text);
-      border: 1px solid var(--border);
-      padding: 8px 14px;
-      border-radius: 8px;
-      font-size: 0.875rem;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .btn:hover {
-      background: var(--border);
-    }
-    .btn-primary {
-      background: var(--accent);
-      border-color: var(--accent);
-      color: #fff;
-      font-weight: 600;
-    }
-    .btn-primary:hover {
-      background: var(--accent-hover);
-    }
-    .playback-controls {
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
     }
+    input[type="file"] { display: none; }
+    .btn {
+      background: var(--panel-bg);
+      color: var(--text);
+      border: 1px solid var(--border);
+      padding: 9px 14px;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .btn-primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+      font-weight: bold;
+    }
+
+    .status-msg {
+      font-size: 0.82rem;
+      padding: 8px 10px;
+      border-radius: 6px;
+      background: rgba(0, 0, 0, 0.4);
+      color: #38bdf8;
+      width: 100%;
+      word-break: break-all;
+    }
+
+    .playback-controls {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
     .slider-row {
       display: flex;
       align-items: center;
-      gap: 10px;
+      gap: 8px;
       width: 100%;
     }
     .slider-row input[type="range"] {
       flex: 1;
       accent-color: var(--accent);
+      height: 6px;
       cursor: pointer;
     }
     .time-display {
-      font-size: 0.8rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
+      min-width: 75px;
       font-variant-numeric: tabular-nums;
-      min-width: 80px;
     }
 
     .status-dashboard {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-      gap: 10px;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px;
     }
     .status-card {
       background: rgba(15, 23, 42, 0.6);
       border: 1px solid var(--border);
-      padding: 12px;
+      padding: 10px;
       border-radius: 8px;
       text-align: center;
     }
-    .status-card .label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      margin-bottom: 4px;
-    }
-    .status-card .val {
-      font-size: 1.25rem;
-      font-weight: bold;
-      color: var(--accent);
-    }
+    .status-card .label { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 2px; }
+    .status-card .val { font-size: 1.15rem; font-weight: bold; color: var(--accent); }
 
     .guide-box {
       background: rgba(16, 185, 129, 0.08);
-      border-left: 4px solid var(--accent);
-      padding: 12px;
+      border-left: 3px solid var(--accent);
+      padding: 10px;
       border-radius: 4px;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       line-height: 1.5;
     }
   </style>
@@ -182,26 +173,27 @@
 
 <div class="container">
   <header>
-    <h1>⛳ AI 골프 스윙 분석기 (PoC)</h1>
-    <p>스마트폰으로 촬영한 스윙 영상을 올리면 관절 궤적과 척추 각도를 실시간 분석합니다.</p>
+    <h1>⛳ AI 골프 스윙 분석기</h1>
+    <p>스윙 영상을 불러오면 관절 궤적과 척추 각도를 분석합니다.</p>
   </header>
 
-  <!-- 영상 영역 (드래그 & 드롭 지원) -->
   <div class="video-container" id="videoWrapper">
     <div id="placeholder" class="placeholder-text">
-      아래 <strong>[📁 스윙 영상 선택]</strong> 버튼을 누르거나,<br>
-      여기로 <strong>동영상 파일을 마우스로 끌어다 놓으세요.</strong>
+      아래 <strong>[📁 스윙 영상 선택]</strong>을 눌러<br>갤러리의 골프 영상을 불러와 주세요.
     </div>
-    <video id="videoElement" playsinline muted crossOrigin="anonymous" style="display: none;"></video>
+    <!-- 모바일 필수 속성: playsinline, muted (crossOrigin 제거) -->
+    <video id="videoElement" playsinline muted preload="auto"></video>
     <canvas id="outputCanvas"></canvas>
   </div>
 
   <div class="control-panel">
+    <div id="statusMsg" class="status-msg">ℹ️ 영상을 선택해 주세요.</div>
+
     <div class="file-input-wrapper">
       <label class="btn btn-primary" for="videoFile">📁 스윙 영상 선택</label>
       <input type="file" id="videoFile" accept="video/*">
-      <button class="btn" id="lockHeadBtn">🎯 현재 머리 위치 고정 (스웨이 체크)</button>
-      <button class="btn" id="resetGuideBtn">🔄 가이드 리셋</button>
+      <button class="btn" id="lockHeadBtn">🎯 머리 위치 고정</button>
+      <button class="btn" id="resetGuideBtn">🔄 리셋</button>
     </div>
 
     <div class="slider-row">
@@ -211,10 +203,9 @@
 
     <div class="playback-controls">
       <button class="btn btn-primary" id="playBtn" disabled>▶ 재생</button>
-      <button class="btn" id="prevFrameBtn" disabled>◀ 1프레임 뒤로</button>
-      <button class="btn" id="nextFrameBtn" disabled>1프레임 앞으로 ▶</button>
+      <button class="btn" id="prevFrameBtn" disabled>◀ 1프레임</button>
+      <button class="btn" id="nextFrameBtn" disabled>1프레임 ▶</button>
       
-      <span style="font-size: 0.85rem; color: var(--text-muted); margin-left: 8px;">배속:</span>
       <button class="btn speed-btn" data-speed="0.25">0.25x</button>
       <button class="btn speed-btn" data-speed="0.5">0.5x</button>
       <button class="btn speed-btn" data-speed="1.0" style="border-color: var(--accent);">1.0x</button>
@@ -226,12 +217,297 @@
         <div class="val" id="spineAngleDisplay">-</div>
       </div>
       <div class="status-card">
-        <div class="label">어깨 기울기 (Shoulder Tilt)</div>
+        <div class="label">어깨 기울기</div>
         <div class="val" id="shoulderTiltDisplay">-</div>
       </div>
       <div class="status-card">
-        <div class="label">골반 기울기 (Hip Tilt)</div>
+        <div class="label">골반 기울기</div>
         <div class="val" id="hipTiltDisplay">-</div>
       </div>
       <div class="status-card">
-        <div class="label">헤드업 / 스웨
+        <div class="label">머리 스웨이 감지</div>
+        <div class="val" id="headShiftDisplay" style="color: #60a5fa;">대기 중</div>
+      </div>
+    </div>
+
+    <div class="guide-box">
+      <strong>💡 사용 요령:</strong> 어드레스 자세에서 영상을 멈추고 <strong>[머리 위치 고정]</strong>을 누른 뒤, <strong>0.25x</strong> 배속으로 재생하여 스웨이나 배치기가 발생하는지 관찰하세요.
+    </div>
+  </div>
+</div>
+
+<script>
+  const video = document.getElementById('videoElement');
+  const canvas = document.getElementById('outputCanvas');
+  const ctx = canvas.getContext('2d');
+  const fileInput = document.getElementById('videoFile');
+  const playBtn = document.getElementById('playBtn');
+  const seekBar = document.getElementById('seekBar');
+  const timeDisplay = document.getElementById('timeDisplay');
+  const prevFrameBtn = document.getElementById('prevFrameBtn');
+  const nextFrameBtn = document.getElementById('nextFrameBtn');
+  const lockHeadBtn = document.getElementById('lockHeadBtn');
+  const resetGuideBtn = document.getElementById('resetGuideBtn');
+  const placeholder = document.getElementById('placeholder');
+  const speedBtns = document.querySelectorAll('.speed-btn');
+  const statusMsg = document.getElementById('statusMsg');
+
+  const spineAngleDisplay = document.getElementById('spineAngleDisplay');
+  const shoulderTiltDisplay = document.getElementById('shoulderTiltDisplay');
+  const hipTiltDisplay = document.getElementById('hipTiltDisplay');
+  const headShiftDisplay = document.getElementById('headShiftDisplay');
+
+  let fixedHeadPosition = null;
+  let isSeeking = false;
+  let pose = null;
+  let isPoseReady = false;
+
+  // MediaPipe 백그라운드 로딩
+  try {
+    pose = new Pose({
+      locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+    });
+    pose.setOptions({
+      modelComplexity: 1,
+      smoothLandmarks: true,
+      minDetectionConfidence: 0.5,
+      minTrackingConfidence: 0.5
+    });
+    pose.onResults(onPoseResults);
+    pose.initialize().then(() => {
+      isPoseReady = true;
+    }).catch(e => console.warn('Pose init warning:', e));
+  } catch (e) {
+    console.error('Pose library load error:', e);
+  }
+
+  // 동영상 로드
+  fileInput.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    statusMsg.textContent = `⏳ 영상 로딩 중: ${file.name}...`;
+    statusMsg.style.color = '#38bdf8';
+
+    const url = URL.createObjectURL(file);
+    video.src = url;
+
+    // 모바일에서 즉시 표시
+    video.style.display = 'block';
+    placeholder.style.display = 'none';
+
+    video.onloadedmetadata = () => {
+      statusMsg.textContent = `✅ 영상 준비 완료! (${video.videoWidth}x${video.videoHeight}, ${video.duration.toFixed(1)}초)`;
+      statusMsg.style.color = '#10b981';
+
+      playBtn.disabled = false;
+      seekBar.disabled = false;
+      prevFrameBtn.disabled = false;
+      nextFrameBtn.disabled = false;
+
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      updateCanvasSize();
+
+      // 모바일 첫 화면 렌더링을 위한 살짝 재생 후 멈춤
+      video.currentTime = 0.05;
+    };
+
+    video.onerror = () => {
+      statusMsg.textContent = '❌ 영상 재생 에러: 브라우저가 지원하지 않는 영상 형식이거나 손상된 파일입니다.';
+      statusMsg.style.color = '#ef4444';
+    };
+  });
+
+  function updateCanvasSize() {
+    canvas.style.width = video.clientWidth + 'px';
+    canvas.style.height = video.clientHeight + 'px';
+  }
+  window.addEventListener('resize', updateCanvasSize);
+
+  video.addEventListener('seeked', () => {
+    renderCurrentFrame();
+  });
+
+  playBtn.addEventListener('click', () => {
+    if (video.paused) {
+      video.play().then(() => {
+        playBtn.textContent = '⏸ 일시정지';
+        requestProcessingLoop();
+      }).catch(err => {
+        console.warn('Play blocked:', err);
+      });
+    } else {
+      video.pause();
+      playBtn.textContent = '▶ 재생';
+    }
+  });
+
+  speedBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      speedBtns.forEach(b => b.style.borderColor = 'var(--border)');
+      btn.style.borderColor = 'var(--accent)';
+      video.playbackRate = parseFloat(btn.dataset.speed);
+    });
+  });
+
+  prevFrameBtn.addEventListener('click', () => {
+    video.pause();
+    playBtn.textContent = '▶ 재생';
+    video.currentTime = Math.max(0, video.currentTime - 0.04);
+  });
+
+  nextFrameBtn.addEventListener('click', () => {
+    video.pause();
+    playBtn.textContent = '▶ 재생';
+    video.currentTime = Math.min(video.duration, video.currentTime + 0.04);
+  });
+
+  video.addEventListener('timeupdate', () => {
+    if (!isSeeking && video.duration) {
+      seekBar.value = (video.currentTime / video.duration) * 100;
+      updateTimeDisplay();
+    }
+  });
+
+  seekBar.addEventListener('input', () => {
+    isSeeking = true;
+    if (video.duration) {
+      video.currentTime = (seekBar.value / 100) * video.duration;
+      updateTimeDisplay();
+    }
+  });
+
+  seekBar.addEventListener('change', () => {
+    isSeeking = false;
+  });
+
+  function updateTimeDisplay() {
+    const curM = Math.floor(video.currentTime / 60);
+    const curS = Math.floor(video.currentTime % 60);
+    const durM = Math.floor(video.duration / 60) || 0;
+    const durS = Math.floor(video.duration % 60) || 0;
+    timeDisplay.textContent = `${String(curM).padStart(2,'0')}:${String(curS).padStart(2,'0')} / ${String(durM).padStart(2,'0')}:${String(durS).padStart(2,'0')}`;
+  }
+
+  lockHeadBtn.addEventListener('click', () => {
+    if (lastLandmarks && lastLandmarks[0]) {
+      fixedHeadPosition = {
+        x: lastLandmarks[0].x * canvas.width,
+        y: lastLandmarks[0].y * canvas.height
+      };
+      headShiftDisplay.textContent = '고정됨 (정상)';
+      headShiftDisplay.style.color = '#10b981';
+      renderCurrentFrame();
+    } else {
+      alert('관절이 아직 감지되지 않았습니다. 영상을 재생하거나 프레임을 이동해 주세요.');
+    }
+  });
+
+  resetGuideBtn.addEventListener('click', () => {
+    fixedHeadPosition = null;
+    headShiftDisplay.textContent = '대기 중';
+    headShiftDisplay.style.color = '#60a5fa';
+    renderCurrentFrame();
+  });
+
+  async function requestProcessingLoop() {
+    if (!video.paused && !video.ended) {
+      await renderCurrentFrame();
+      if ('requestVideoFrameCallback' in video) {
+        video.requestVideoFrameCallback(requestProcessingLoop);
+      } else {
+        requestAnimationFrame(requestProcessingLoop);
+      }
+    }
+  }
+
+  async function renderCurrentFrame() {
+    if (video.readyState >= 2 && pose) {
+      try {
+        await pose.send({ image: video });
+      } catch (err) {}
+    }
+  }
+
+  let lastLandmarks = null;
+
+  function onPoseResults(results) {
+    ctx.save();
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+    if (results.poseLandmarks) {
+      lastLandmarks = results.poseLandmarks;
+      const lm = results.poseLandmarks;
+
+      drawConnectors(ctx, lm, POSE_CONNECTIONS, { color: 'rgba(255, 255, 255, 0.7)', lineWidth: 2 });
+      drawLandmarks(ctx, lm, { color: '#10b981', fillColor: '#34d399', lineWidth: 1, radius: 4 });
+
+      const leftShoulder = lm;
+      const rightShoulder = lm[12];
+      const leftHip = lm[23];
+      const rightHip = lm[24];
+      const nose = lm[0];
+
+      const midShoulder = {
+        x: (leftShoulder.x + rightShoulder.x) / 2 * canvas.width,
+        y: (leftShoulder.y + rightShoulder.y) / 2 * canvas.height
+      };
+      const midHip = {
+        x: (leftHip.x + rightHip.x) / 2 * canvas.width,
+        y: (leftHip.y + rightHip.y) / 2 * canvas.height
+      };
+
+      ctx.beginPath();
+      ctx.moveTo(midShoulder.x, midShoulder.y);
+      ctx.lineTo(midHip.x, midHip.y);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 4;
+      ctx.stroke();
+
+      const spineDx = midShoulder.x - midHip.x;
+      const spineDy = midShoulder.y - midHip.y;
+      const spineAngle = Math.abs(Math.round(Math.atan2(spineDx, -spineDy) * (180 / Math.PI)));
+      spineAngleDisplay.textContent = `${spineAngle}°`;
+
+      const shoulderDx = (rightShoulder.x - leftShoulder.x) * canvas.width;
+      const shoulderDy = (rightShoulder.y - leftShoulder.y) * canvas.height;
+      const shoulderAngle = Math.round(Math.atan2(shoulderDy, shoulderDx) * (180 / Math.PI));
+      shoulderTiltDisplay.textContent = `${shoulderAngle}°`;
+
+      const hipDx = (rightHip.x - leftHip.x) * canvas.width;
+      const hipDy = (rightHip.y - leftHip.y) * canvas.height;
+      const hipAngle = Math.round(Math.atan2(hipDy, hipDx) * (180 / Math.PI));
+      hipTiltDisplay.textContent = `${hipAngle}°`;
+
+      if (fixedHeadPosition) {
+        const headRadius = 35;
+        ctx.beginPath();
+        ctx.arc(fixedHeadPosition.x, fixedHeadPosition.y, headRadius, 0, 2 * Math.PI);
+        ctx.strokeStyle = '#10b981';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        const curHeadX = nose.x * canvas.width;
+        const curHeadY = nose.y * canvas.height;
+        ctx.beginPath();
+        ctx.arc(curHeadX, curHeadY, 5, 0, 2 * Math.PI);
+        ctx.fillStyle = '#facc15';
+        ctx.fill();
+
+        const dist = Math.hypot(curHeadX - fixedHeadPosition.x, curHeadY - fixedHeadPosition.y);
+        if (dist > headRadius) {
+          headShiftDisplay.textContent = '머리 이탈 (스웨이/헤드업 주의)';
+          headShiftDisplay.style.color = '#ef4444';
+        } else {
+          headShiftDisplay.textContent = '안정적 (고정 유지)';
+          headShiftDisplay.style.color = '#10b981';
+        }
+      }
+    }
+    ctx.restore();
+  }
+</script>
+
+</body>
+</html>
